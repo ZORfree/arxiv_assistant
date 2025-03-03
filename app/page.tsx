@@ -106,6 +106,9 @@ export default function Home() {
       setAllPapers(fetchedPapers);
       setCurrentPage(1);
       const firstPagePapers = fetchedPapers.slice(0, PAPERS_PER_PAGE);
+      // 先设置原始论文数据
+      setPapers(firstPagePapers.map(paper => ({ ...paper })));
+      // 再进行分析
       await analyzePapers(firstPagePapers, preferences, 1);
     } catch (error) {
       console.error('Error fetching papers:', error);
