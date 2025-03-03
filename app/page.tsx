@@ -17,6 +17,9 @@ export default function Home() {
   const [preferences, setPreferences] = useState<UserPreference | null>(null);
   const [showPreferences, setShowPreferences] = useState(true);
   const [showRelevantOnly, setShowRelevantOnly] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzedCount, setAnalyzedCount] = useState(0);
+  const [totalAnalysisCount, setTotalAnalysisCount] = useState(0);
 
   useEffect(() => {
     const savedPreferences = localStorage.getItem('user_preferences');
@@ -26,7 +29,6 @@ export default function Home() {
       setShowPreferences(false);
     }
   }, []);
-
   const handlePreferenceSave = async (newPreferences: UserPreference) => {
     setPreferences(newPreferences);
     setShowPreferences(false);
@@ -35,9 +37,11 @@ export default function Home() {
       await analyzePapers(papers, newPreferences, currentPage);
     }
   };
-
   const analyzePapers = async (papers: ArxivPaper[], preferences: UserPreference, page: number) => {
     try {
+      setIsAnalyzing(true);
+      setAnalyzedCount(0);
+      setTotalAnalysisCount(papers.length);
       // 初始化论文列表，每篇论文的分析结果初始为 undefined
       setPapers(papers.map(paper => ({ ...paper })));
       
@@ -59,6 +63,7 @@ export default function Home() {
             newPapers[index] = { ...newPapers[index], analysis };
             return newPapers;
           });
+          setAnalyzedCount(prev => prev + 1);
         } catch (error) {
           console.error(`分析论文失败: ${paper.title}`, error);
           setPapers(currentPapers => {
@@ -75,17 +80,19 @@ export default function Home() {
             };
             return newPapers;
           });
+          setAnalyzedCount(prev => prev + 1);
         }
       });
 
       // 等待所有分析完成
       await Promise.all(analysisPromises);
+      setIsAnalyzing(false);
     } catch (error) {
       console.error('Error analyzing papers:', error);
       alert('论文分析失败，请检查API配置并重试');
+      setIsAnalyzing(false);
     }
   };
-
   const handleSearch = async (searchParams: ArxivSearchParams) => {
     if (!preferences) {
       alert('请先设置您的偏好');
@@ -152,6 +159,24 @@ export default function Home() {
                 totalPapers={allPapers.length}
               />
             </div>
+            {isAnalyzing && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    正在分析论文 ({analyzedCount}/{totalAnalysisCount})
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    {Math.round((analyzedCount / totalAnalysisCount) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                  <div
+                    className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${(analyzedCount / totalAnalysisCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
             <div className="w-full">
               <PaperList
                 papers={showRelevantOnly ? papers.filter(paper => paper.analysis?.isRelevant) : papers}

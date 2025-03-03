@@ -52,16 +52,10 @@ export default function PaperList({ papers, loading, showRelevantOnly = false, c
     );
   }
 
-  const filteredPapers = showRelevantOnly
-    ? papers.filter(paper => paper.analysis?.isRelevant)
-    : papers;
-
-  const filteredCount = papers.length - filteredPapers.length;
-
   return (
     <div className="space-y-6">
       <div className="space-y-6">
-        {filteredPapers.map((paper) => (
+        {papers.map((paper) => (
           <div
             key={paper.id}
             className={`p-6 rounded-lg shadow-sm border ${paper.analysis?.isRelevant ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700'}`}
