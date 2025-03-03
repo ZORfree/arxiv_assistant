@@ -156,6 +156,15 @@ export default function Home() {
               <PaperList
                 papers={showRelevantOnly ? papers.filter(paper => paper.analysis?.isRelevant) : papers}
                 loading={loading}
+                currentPage={currentPage}
+                totalPapers={allPapers.length}
+                onPageChange={async (page) => {
+                  setCurrentPage(page);
+                  const startIndex = (page - 1) * PAPERS_PER_PAGE;
+                  const endIndex = startIndex + PAPERS_PER_PAGE;
+                  const pagePapers = allPapers.slice(startIndex, endIndex);
+                  await analyzePapers(pagePapers, preferences!, page);
+                }}
               />
             </div>
           </section>

@@ -29,6 +29,7 @@ export default function SearchForm({ onSearch, loading, showRelevantOnly, onShow
   const [endDate, setEndDate] = useState('');
   const [cachedPapersCount, setCachedPapersCount] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
+  // const [filteredCount] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
