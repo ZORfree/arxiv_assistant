@@ -59,7 +59,7 @@ interface ArxivResponse {
 }
 
 export class ArxivAPI {
-  private static readonly BASE_URL = 'http://export.arxiv.org/api/query';
+  private static readonly BASE_URL = 'https://export.arxiv.org/api/query';
   private static readonly DELAY = Number(process.env.NEXT_PUBLIC_ARXIV_API_DELAY) || Number(process.env.ARXIV_API_DELAY) || 3000;
   private static readonly MAX_RESULTS = Number(process.env.NEXT_PUBLIC_ARXIV_API_MAX_RESULTS) || Number(process.env.ARXIV_API_MAX_RESULTS) || 100;
 
