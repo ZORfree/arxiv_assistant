@@ -24,6 +24,40 @@ export interface ArxivSearchParams {
   endDate?: string;
 }
 
+interface ArxivAuthor {
+  name: string[];
+}
+
+interface ArxivCategory {
+  $: {
+    term: string;
+  };
+}
+
+interface ArxivLink {
+  $: {
+    href: string;
+    type: string;
+  };
+}
+
+interface ArxivEntry {
+  id: string[];
+  title: string[];
+  summary: string[];
+  author: ArxivAuthor[];
+  category: ArxivCategory[];
+  published: string[];
+  updated: string[];
+  link: ArxivLink[];
+}
+
+interface ArxivResponse {
+  feed: {
+    entry?: ArxivEntry[];
+  };
+}
+
 export class ArxivAPI {
   private static readonly BASE_URL = 'http://export.arxiv.org/api/query';
   private static readonly DELAY = Number(process.env.NEXT_PUBLIC_ARXIV_API_DELAY) || Number(process.env.ARXIV_API_DELAY) || 3000;
@@ -79,7 +113,7 @@ export class ArxivAPI {
       });
 
       console.log(`[ArXiv] API响应状态码：${response.status}`);
-      const result = await parseXMLString(response.data);
+      const result = await parseXMLString(response.data) as ArxivResponse;
       const papers = this.parseArxivResponse(result);
       console.log(`[ArXiv] 成功获取到 ${papers.length} 篇论文`);
       return papers;
@@ -89,21 +123,21 @@ export class ArxivAPI {
     }
   }
 
-  private static parseArxivResponse(data: any): ArxivPaper[] {
+  private static parseArxivResponse(data: ArxivResponse): ArxivPaper[] {
     if (!data.feed || !data.feed.entry) {
       console.log('[ArXiv] 未找到任何论文数据');
       return [];
     }
 
-    return data.feed.entry.map((entry: any) => ({
+    return data.feed.entry.map((entry: ArxivEntry) => ({
       id: entry.id[0],
       title: entry.title[0],
       summary: entry.summary[0],
-      authors: entry.author.map((author: any) => author.name[0]),
-      categories: entry.category.map((cat: any) => cat.$.term),
+      authors: entry.author.map((author: ArxivAuthor) => author.name[0]),
+      categories: entry.category.map((cat: ArxivCategory) => cat.$.term),
       published: entry.published[0],
       updated: entry.updated[0],
-      link: entry.link.find((link: any) => link.$.type === 'text/html')?.$.href || ''
+      link: entry.link.find((link: ArxivLink) => link.$.type === 'text/html')?.$.href || ''
     }));
   }
 

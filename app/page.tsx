@@ -12,7 +12,7 @@ const PAPERS_PER_PAGE = 10;
 export default function Home() {
   const [allPapers, setAllPapers] = useState<ArxivPaper[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [papers, setPapers] = useState<Array<ArxivPaper & { analysis?: any }>>([]);
+  const [papers, setPapers] = useState<Array<ArxivPaper & { analysis?: { isRelevant: boolean; reason: string; score: number; titleTrans: string; summaryTrans: string; } }>>([]);
   const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState<UserPreference | null>(null);
   const [showPreferences, setShowPreferences] = useState(true);
@@ -34,10 +34,10 @@ export default function Home() {
     setShowPreferences(false);
     localStorage.setItem('user_preferences', JSON.stringify(newPreferences));
     if (papers.length > 0) {
-      await analyzePapers(papers, newPreferences, currentPage);
+      await analyzePapers(papers, newPreferences);
     }
   };
-  const analyzePapers = async (papers: ArxivPaper[], preferences: UserPreference, page: number) => {
+  const analyzePapers = async (papers: ArxivPaper[], preferences: UserPreference) => {
     try {
       setIsAnalyzing(true);
       setAnalyzedCount(0);
@@ -110,7 +110,7 @@ export default function Home() {
       setPapers(firstPagePapers.map(paper => ({ ...paper })));
       setLoading(false);
       // 再进行分析
-      await analyzePapers(firstPagePapers, preferences, 1);
+      await analyzePapers(firstPagePapers, preferences);
     } catch (error) {
       console.error('Error fetching papers:', error);
       alert('获取论文失败，请稍后重试');
@@ -192,7 +192,7 @@ export default function Home() {
                   const startIndex = (page - 1) * PAPERS_PER_PAGE;
                   const endIndex = startIndex + PAPERS_PER_PAGE;
                   const pagePapers = allPapers.slice(startIndex, endIndex);
-                  await analyzePapers(pagePapers, preferences!, page);
+                  await analyzePapers(pagePapers, preferences!);
                 }}
               />
             </div>

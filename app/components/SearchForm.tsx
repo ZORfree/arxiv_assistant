@@ -28,10 +28,8 @@ export default function SearchForm({ onSearch, loading, showRelevantOnly, onShow
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [cachedPapersCount, setCachedPapersCount] = useState(0);
-  const [filteredCount, setFilteredCount] = useState(0);
-  // const [filteredCount] = useState(0);
+  const [filteredCount] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
-
   useEffect(() => {
     const savedSearch = localStorage.getItem('last_search');
     if (savedSearch) {

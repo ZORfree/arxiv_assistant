@@ -14,6 +14,7 @@ export interface PaperAnalysis {
   summaryTrans: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface CachedAnalysis extends PaperAnalysis {
   timestamp: number;
 }

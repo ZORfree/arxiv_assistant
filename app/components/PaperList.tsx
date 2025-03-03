@@ -6,13 +6,12 @@ import { PaperAnalysis } from '@/lib/ai';
 interface PaperListProps {
   papers: Array<ArxivPaper & { analysis?: PaperAnalysis }>;
   loading?: boolean;
-  showRelevantOnly?: boolean;
   currentPage: number;
   totalPapers: number;
   onPageChange: (page: number) => void;
 }
 
-export default function PaperList({ papers, loading, showRelevantOnly = false, currentPage, totalPapers, onPageChange }: PaperListProps) {
+export default function PaperList({ papers, loading, currentPage, totalPapers, onPageChange }: PaperListProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
