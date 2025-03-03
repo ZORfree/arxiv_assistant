@@ -28,13 +28,13 @@ export class AIService {
 
   private static validateConfig() {
     if (!this.API_KEY) {
-      throw new Error('OpenAI API密钥未配置，请在Vercel项目设置中配置NEXT_PUBLIC_OPENAI_API_KEY');
+      throw new Error('OpenAI API密钥未配置，请在Vercel项目设置中配置OPENAI_API_KEY');
     }
     if (!this.API_MODEL) {
-      throw new Error('OpenAI模型未配置，请在Vercel项目设置中配置NEXT_PUBLIC_OPENAI_MODEL');
+      throw new Error('OpenAI模型未配置，请在Vercel项目设置中配置OPENAI_MODEL');
     }
     if (!this.API_BASE_URL) {
-      throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置NEXT_PUBLIC_OPENAI_API_BASE_URL');
+      throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置OPENAI_API_BASE_URL');
     }
   }
 
