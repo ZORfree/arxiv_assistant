@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
-import { AIService } from '@/lib/ai';
 import { UserPreference, PaperAnalysis } from '@/lib/ai';
 import axios from 'axios';
+import redis from '@/lib/redis';
+
+const CACHE_EXPIRY = 7 * 24 * 60 * 60; // 7天过期（秒）
+
+function getCacheKey(paper: { title: string; summary: string }): string {
+  return `paper_analysis_${Buffer.from(paper.title + paper.summary).toString('base64')}`;
+}
 
 export async function POST(request: Request) {
   try {
+    // 获取请求参数
     const { paper, preference } = await request.json() as {
       paper: {
         title: string;
@@ -27,6 +34,22 @@ export async function POST(request: Request) {
     }
     if (!API_BASE_URL) {
       throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置OPENAI_API_BASE_URL');
+    }
+
+    // 尝试从缓存获取
+    const cacheKey = getCacheKey(paper);
+    const cached = await redis.get<PaperAnalysis & { timestamp: number }>(cacheKey);
+    
+    if (cached) {
+      // 检查缓存是否过期
+      if (Date.now() - cached.timestamp <= CACHE_EXPIRY * 1000) {
+        console.log(`[Cache] 使用缓存的分析结果：${paper.title}`);
+        const { timestamp, ...analysis } = cached;
+        return NextResponse.json(analysis);
+      } else {
+        // 缓存过期，删除
+        await redis.del(cacheKey);
+      }
     }
 
     console.log(`[AI] 开始分析论文：${paper.title}`);
@@ -69,10 +92,16 @@ export async function POST(request: Request) {
       }
     });
 
-    const result = JSON.parse(response.data.choices[0].message.content);
+    const result = JSON.parse(response.data.choices[0].message.content) as PaperAnalysis;
     console.log(`[AI] 分析完成，相关度：${result.score}%`);
     
-    return NextResponse.json(result as PaperAnalysis);
+    // 保存到缓存
+    await redis.set(cacheKey, {
+      ...result,
+      timestamp: Date.now()
+    }, { ex: CACHE_EXPIRY });
+    
+    return NextResponse.json(result);
   } catch (error) {
     console.error('[API] 论文分析失败:', error);
     return NextResponse.json(
