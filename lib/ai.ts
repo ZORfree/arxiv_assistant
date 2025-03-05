@@ -1,3 +1,5 @@
+import { UserService } from "./user";
+
 export interface UserPreference {
   profession: string;
   interests: string[];
@@ -20,12 +22,17 @@ export class AIService {
     categories: string[];
   }, preference: UserPreference): Promise<PaperAnalysis> {
     try {
+      const userId = UserService.getUserId();
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ paper, preference })
+        body: JSON.stringify({ paper, preference, userId })
       });
 
       if (!response.ok) {
@@ -51,16 +58,14 @@ export class AIService {
       try {
         const analysis = await this.analyzePaper(paper, preference);
         results.push(analysis);
-        // Add a small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
-        console.error(`Error analyzing paper: ${paper.title}`, error);
+        console.error(`[AI] 批量分析论文失败:`, error);
         results.push({
           isRelevant: false,
-          reason: 'Analysis failed',
+          reason: '分析失败',
           score: 0,
-          titleTrans: "",
-          summaryTrans: ""
+          titleTrans: '',
+          summaryTrans: ''
         });
       }
     }

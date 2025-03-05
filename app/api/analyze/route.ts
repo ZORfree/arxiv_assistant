@@ -5,20 +5,21 @@ import redis from '@/lib/redis';
 
 const CACHE_EXPIRY = 7 * 24 * 60 * 60; // 7天过期（秒）
 
-function getCacheKey(paper: { title: string; summary: string }): string {
-  return `paper_analysis_${Buffer.from(paper.title + paper.summary).toString('base64')}`;
+function getCacheKey(paper: { title: string; summary: string }, userId: string): string {
+  return `paper_analysis_${userId}_${Buffer.from(paper.title + paper.summary).toString('base64')}`;
 }
 
 export async function POST(request: Request) {
   try {
     // 获取请求参数
-    const { paper, preference } = await request.json() as {
+    const { paper, preference, userId } = await request.json() as {
       paper: {
         title: string;
         summary: string;
         categories: string[];
       };
       preference: UserPreference;
+      userId: string;
     };
 
     // 验证环境变量
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     // 尝试从缓存获取
-    const cacheKey = getCacheKey(paper);
+    const cacheKey = getCacheKey(paper, userId);
     const cached = await redis.get<PaperAnalysis & { timestamp: number }>(cacheKey);
     
     if (cached) {
