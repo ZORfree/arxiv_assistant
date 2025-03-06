@@ -45,47 +45,81 @@ export default function Home() {
       // 初始化论文列表，每篇论文的分析结果初始为 undefined
       setPapers(papers.map(paper => ({ ...paper })));
       
-      // 并行处理所有论文的分析
-      const analysisPromises = papers.map(async (paper, index) => {
-        try {
-          const analysis = await AIService.analyzePaper(
-            {
-              title: paper.title,
-              summary: paper.summary,
-              categories: paper.categories
-            },
-            preferences
+      // 使用批量分析方法，确保并发请求数量不超过限制
+      const paperDataForAnalysis = papers.map(paper => ({
+        title: paper.title,
+        summary: paper.summary,
+        categories: paper.categories
+      }));
+      
+      // 创建一个进度更新函数
+      const updateProgress = (completedCount: number) => {
+        setAnalyzedCount(completedCount);
+      };
+      
+      // 重写批量分析方法，支持进度回调
+      const batchAnalyze = async () => {
+        const maxConcurrent = Number(process.env.MAX_CONCURRENT_REQUESTS || '2');
+        const results: Array<{
+          isRelevant: boolean;
+          reason: string;
+          score: number;
+          titleTrans: string;
+          summaryTrans: string;
+        }> = new Array(papers.length);
+        
+        const failureResult = {
+          isRelevant: false,
+          reason: '分析失败',
+          score: 0,
+          titleTrans: '',
+          summaryTrans: ''
+        };
+        
+        const queue = paperDataForAnalysis.map((paper, index) => ({ paper, index }));
+        let completedCount = 0;
+        
+        while (queue.length > 0) {
+          const batch = queue.splice(0, maxConcurrent);
+          const batchPromises = batch.map(({ paper, index }) =>
+            AIService.analyzePaper(paper, preferences)
+              .then(result => {
+                results[index] = result;
+                completedCount++;
+                updateProgress(completedCount);
+                
+                // 立即更新这篇论文的分析结果
+                setPapers(currentPapers => {
+                  const newPapers = [...currentPapers];
+                  newPapers[index] = { ...newPapers[index], analysis: result };
+                  return newPapers;
+                });
+              })
+              .catch(() => {
+                results[index] = failureResult;
+                completedCount++;
+                updateProgress(completedCount);
+                
+                // 更新失败状态
+                setPapers(currentPapers => {
+                  const newPapers = [...currentPapers];
+                  newPapers[index] = {
+                    ...newPapers[index],
+                    analysis: failureResult
+                  };
+                  return newPapers;
+                });
+              })
           );
           
-          // 立即更新这篇论文的分析结果
-          setPapers(currentPapers => {
-            const newPapers = [...currentPapers];
-            newPapers[index] = { ...newPapers[index], analysis };
-            return newPapers;
-          });
-          setAnalyzedCount(prev => prev + 1);
-        } catch (error) {
-          console.error(`分析论文失败: ${paper.title}`, error);
-          setPapers(currentPapers => {
-            const newPapers = [...currentPapers];
-            newPapers[index] = {
-              ...newPapers[index],
-              analysis: {
-                isRelevant: false,
-                reason: '分析失败',
-                score: 0,
-                titleTrans: "",
-                summaryTrans: ""
-              }
-            };
-            return newPapers;
-          });
-          setAnalyzedCount(prev => prev + 1);
+          // 等待当前批次的所有请求完成后再处理下一批
+          await Promise.all(batchPromises);
         }
-      });
-
-      // 等待所有分析完成
-      await Promise.all(analysisPromises);
+        
+        return results;
+      };
+      
+      await batchAnalyze();
       setIsAnalyzing(false);
     } catch (error) {
       console.error('Error analyzing papers:', error);
@@ -116,6 +150,56 @@ export default function Home() {
       alert('获取论文失败，请稍后重试');
     } finally {
       setLoading(false);
+    }
+  };
+  const handleRetryAnalysis = async (paper: ArxivPaper) => {
+    if (!preferences) return;
+    
+    try {
+      setIsAnalyzing(true);
+      setAnalyzedCount(0);
+      setTotalAnalysisCount(1);
+      
+      const analysis = await AIService.analyzePaper(
+        {
+          title: paper.title,
+          summary: paper.summary,
+          categories: paper.categories
+        },
+        preferences
+      );
+      
+      setPapers(currentPapers => {
+        return currentPapers.map(p => {
+          if (p.id === paper.id) {
+            return { ...p, analysis };
+          }
+          return p;
+        });
+      });
+      setAnalyzedCount(1);
+    } catch (error) {
+      console.error(`重新分析论文失败: ${paper.title}`, error);
+      setPapers(currentPapers => {
+        return currentPapers.map(p => {
+          if (p.id === paper.id) {
+            return {
+              ...p,
+              analysis: {
+                isRelevant: false,
+                reason: '分析失败',
+                score: 0,
+                titleTrans: "",
+                summaryTrans: ""
+              }
+            };
+          }
+          return p;
+        });
+      });
+      setAnalyzedCount(1);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -194,6 +278,7 @@ export default function Home() {
                   const pagePapers = allPapers.slice(startIndex, endIndex);
                   await analyzePapers(pagePapers, preferences!);
                 }}
+                onRetryAnalysis={handleRetryAnalysis}
               />
             </div>
           </section>

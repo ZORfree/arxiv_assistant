@@ -52,8 +52,7 @@ export async function POST(request: Request) {
         await redis.del(cacheKey);
       }
     }
-
-    console.log(`[AI] 开始分析论文：${paper.title}`);
+    console.log(`[AI] [${new Date().toLocaleString()}] 开始分析论文：${paper.title}`);
     console.log(`[AI] 使用模型：${API_MODEL}`);
     
     const prompt = `作为一个AI助手，请基于以下信息分析这篇论文是否与用户相关：

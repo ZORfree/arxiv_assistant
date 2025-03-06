@@ -9,9 +9,10 @@ interface PaperListProps {
   currentPage: number;
   totalPapers: number;
   onPageChange: (page: number) => void;
+  onRetryAnalysis?: (paper: ArxivPaper) => void;
 }
 
-export default function PaperList({ papers, loading, currentPage, totalPapers, onPageChange }: PaperListProps) {
+export default function PaperList({ papers, loading, currentPage, totalPapers, onPageChange, onRetryAnalysis }: PaperListProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -115,6 +116,14 @@ export default function PaperList({ papers, loading, currentPage, totalPapers, o
                     <p className="text-sm text-gray-600 dark:text-gray-300 flex-1">
                       {paper.analysis.reason}
                     </p>
+                    {paper.analysis.reason === '分析失败' && onRetryAnalysis && (
+                      <button
+                        onClick={() => onRetryAnalysis(paper)}
+                        className="px-3 py-1 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800 dark:hover:bg-indigo-900/40"
+                      >
+                        重新分析
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
