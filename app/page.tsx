@@ -6,6 +6,7 @@ import { AIService, UserPreference } from '@/lib/ai';
 import PreferenceForm from './components/PreferenceForm';
 import SearchForm from './components/SearchForm';
 import PaperList from './components/PaperList';
+import Settings from './components/Settings';
 
 const PAPERS_PER_PAGE = 10;
 
@@ -221,21 +222,18 @@ export default function Home() {
             onClick={() => setShowPreferences(true)}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
-            修改偏好设置
+            设置
           </button>
         )}
       </header>
 
       <main className="max-w-4xl mx-auto space-y-8">
         {showPreferences && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <PreferenceForm
-                onSave={handlePreferenceSave}
-                initialPreferences={preferences || undefined}
-              />
-            </div>
-          </div>
+          <Settings
+            onSave={handlePreferenceSave}
+            initialPreferences={preferences || undefined}
+            onClose={() => setShowPreferences(false)}
+          />
         )}
 
         {preferences && (

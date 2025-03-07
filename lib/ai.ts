@@ -4,6 +4,12 @@ export interface UserPreference {
   profession: string;
   interests: string[];
   nonInterests: string[];
+  apiConfig?: {
+    apiKey: string;
+    apiBaseUrl: string;
+    model: string;
+    maxConcurrentRequests: number;
+  };
 }
 
 export interface PaperAnalysis {

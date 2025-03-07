@@ -54,7 +54,7 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(preferences);
+    setPreferences(prev => ({ ...prev }));
   };
 
   return (
@@ -149,15 +149,6 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
             </span>
           ))}
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          保存设置
-        </button>
       </div>
     </form>
   );
