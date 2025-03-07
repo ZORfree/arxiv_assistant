@@ -114,8 +114,10 @@ export class ArxivAPI {
 
       console.log(`[ArXiv] API响应状态码：${response.status}`);
       const result = await parseXMLString(response.data) as ArxivResponse;
+      // console.log(`[ArXiv] 成功获取到论文`,result);
       const papers = this.parseArxivResponse(result);
       console.log(`[ArXiv] 成功获取到 ${papers.length} 篇论文`);
+      // console.log(`[ArXiv] 成功获取到 篇论文`,papers);
       return papers;
     } catch (error) {
       console.error('Error fetching papers from ArXiv:', error);
@@ -128,6 +130,7 @@ export class ArxivAPI {
       console.log('[ArXiv] 未找到任何论文数据');
       return [];
     }
+    // console.log('[ArXiv] 获取到论文：',data.feed.entry);
 
     return data.feed.entry.map((entry: ArxivEntry) => ({
       id: entry.id[0],
@@ -137,7 +140,7 @@ export class ArxivAPI {
       categories: entry.category.map((cat: ArxivCategory) => cat.$.term),
       published: entry.published[0],
       updated: entry.updated[0],
-      link: entry.link.find((link: ArxivLink) => link.$.type === 'text/html')?.$.href || ''
+      link: entry.link.find((link: ArxivLink) => link.$.type === 'text/html')?.$.href || entry.id[0].replace('abs', 'pdf')
     }));
   }
 

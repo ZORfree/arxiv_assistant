@@ -5,8 +5,8 @@ import redis from '@/lib/redis';
 
 const CACHE_EXPIRY = 7 * 24 * 60 * 60; // 7天过期（秒）
 
-function getCacheKey(paper: { title: string; summary: string }, userId: string): string {
-  return `paper_analysis_${userId}_${Buffer.from(paper.title + paper.summary).toString('base64')}`;
+function getCacheKey(paperId: string, userId: string): string {
+  return `paper_analysis_${userId}_${paperId}`;
 }
 
 export async function POST(request: Request) {
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     // 获取请求参数
     const { paper, preference, userId } = await request.json() as {
       paper: {
+        link: string;
         title: string;
         summary: string;
         categories: string[];
@@ -36,9 +37,14 @@ export async function POST(request: Request) {
     if (!API_BASE_URL) {
       throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置OPENAI_API_BASE_URL');
     }
-
+    // 从论文URL中提取论文ID（格式为：xxxx.xxxxx或xxxx.xxxxxvx）
+    console.log(`[TTTTTTTTTTTTT]获取到论文URL：${paper.link}`);
+    const paperId = paper.link.match(/\d+\.\d+(?:v\d+)?/)?.[0];
+    if (!paperId) {
+      throw new Error('无法从论文URL中提取论文ID');
+    }
     // 尝试从缓存获取
-    const cacheKey = getCacheKey(paper, userId);
+    const cacheKey = getCacheKey(paperId, userId);
     const cached = await redis.get<PaperAnalysis & { timestamp: number }>(cacheKey);
     
     if (cached) {
