@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { UserPreference, PaperAnalysis } from '@/lib/ai';
 import axios from 'axios';
 import redis from '@/lib/redis';
+import { ArxivPaper } from '@/lib/arxiv';
 
 const CACHE_EXPIRY = 7 * 24 * 60 * 60; // 7天过期（秒）
 
@@ -13,16 +14,10 @@ export async function POST(request: Request) {
   try {
     // 获取请求参数
     const { paper, preference, userId } = await request.json() as {
-      paper: {
-        link: string;
-        title: string;
-        summary: string;
-        categories: string[];
-      };
+      paper: ArxivPaper;
       preference: UserPreference;
       userId: string;
     };
-
     // 验证环境变量
     const API_KEY = process.env.OPENAI_API_KEY;
     const API_BASE_URL = process.env.OPENAI_API_BASE_URL;
@@ -38,7 +33,7 @@ export async function POST(request: Request) {
       throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置OPENAI_API_BASE_URL');
     }
     // 从论文URL中提取论文ID（格式为：xxxx.xxxxx或xxxx.xxxxxvx）
-    console.log(`[TTTTTTTTTTTTT]获取到论文URL：${paper.link}`);
+    // console.log(`[TTTTTTTTTTTTT]获取到论文URL：${paper.link}`);
     const paperId = paper.link.match(/\d+\.\d+(?:v\d+)?/)?.[0];
     if (!paperId) {
       throw new Error('无法从论文URL中提取论文ID');
@@ -73,7 +68,7 @@ export async function POST(request: Request) {
 - 摘要：${paper.summary}
 - 分类：${paper.categories.join(', ')}
 
-请分析这篇论文是否与用户的研究方向和兴趣相关，并给出理由，以及完成对标题和摘要进行专业翻译为中文。请返回严格符合JSON格式的内容，不要包含多余的标记或解释，
+请分析这篇论文是否与用户的研究方向和兴趣相关，并给出理由，以及完成对标题和摘要进行专业翻译为中文。请返回严格符合JSON格式的内容，不要包含多余的标记或解释，但要注意对特殊字符进行转义，
 如：{"titleTrans":string (标题翻译内容),"summaryTrans":string (摘要翻译内容),"isRelevant":boolean (是否相关),"reason": string (原因说明,中文),"score": number (相关度评分，0-100)}`;
 
     console.log('[AI] 正在调用OpenAI API...');

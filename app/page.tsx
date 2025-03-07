@@ -49,7 +49,8 @@ export default function Home() {
       const paperDataForAnalysis = papers.map(paper => ({
         title: paper.title,
         summary: paper.summary,
-        categories: paper.categories
+        categories: paper.categories,
+        link: paper.link
       }));
       
       // 创建一个进度更新函数
@@ -164,7 +165,8 @@ export default function Home() {
         {
           title: paper.title,
           summary: paper.summary,
-          categories: paper.categories
+          categories: paper.categories,
+          link:paper.link
         },
         preferences
       );

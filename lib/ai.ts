@@ -27,6 +27,7 @@ export class AIService {
   }
   
   static async analyzePaper(paper: {
+    link: string;
     title: string;
     summary: string;
     categories: string[];
@@ -58,6 +59,7 @@ export class AIService {
   }
   
   static async batchAnalyzePapers(papers: Array<{
+    link: string;
     title: string;
     summary: string;
     categories: string[];
