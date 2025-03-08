@@ -58,10 +58,10 @@ export default function Home() {
       const updateProgress = (completedCount: number) => {
         setAnalyzedCount(completedCount);
       };
-      
       // 重写批量分析方法，支持进度回调
       const batchAnalyze = async () => {
-        const maxConcurrent = Number(process.env.MAX_CONCURRENT_REQUESTS || '2');
+        // 从用户设置中获取最大并发请求数，而不是从环境变量
+        const maxConcurrent = preferences.apiConfig?.maxConcurrentRequests || 2;
         const results: Array<{
           isRelevant: boolean;
           reason: string;
