@@ -31,10 +31,27 @@ export default function Home() {
     }
   }, []);
   const handlePreferenceSave = async (newPreferences: UserPreference) => {
+    // 只有在研究偏好（profession、interests、nonInterests）发生变化时才重置用户ID
+    const oldPreferences = preferences;
+    const needResetUserId = !oldPreferences || 
+      oldPreferences.profession !== newPreferences.profession || 
+      JSON.stringify(oldPreferences.interests) !== JSON.stringify(newPreferences.interests) || 
+      JSON.stringify(oldPreferences.nonInterests) !== JSON.stringify(newPreferences.nonInterests);
+    
+    if (needResetUserId) {
+      // 正确导入UserService类并调用其resetUserId方法
+      const { UserService } = await import('@/lib/user');
+      UserService.resetUserId();
+      console.log('用户ID已重置，研究偏好发生变化');
+    } else {
+      console.log('API配置变更，无需重置用户ID');
+    }
+    
     setPreferences(newPreferences);
     setShowPreferences(false);
     localStorage.setItem('user_preferences', JSON.stringify(newPreferences));
-    if (papers.length > 0) {
+    // 只有在用户ID重置时才重新分析论文
+    if (papers.length > 0 && needResetUserId) {
       await analyzePapers(papers, newPreferences);
     }
   };

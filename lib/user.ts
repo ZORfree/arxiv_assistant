@@ -10,4 +10,10 @@ export class UserService {
     }
     return userId;
   }
+
+  static resetUserId(): string {
+    const newUserId = crypto.randomUUID();
+    localStorage.setItem(this.USER_ID_KEY, newUserId);
+    return newUserId;
+  }
 }

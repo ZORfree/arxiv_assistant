@@ -67,20 +67,29 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
   return (
     <div className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
       <div>
-        <label htmlFor="profession" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+        <label htmlFor="profession" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
           职业/研究领域
         </label>
-        <input
-          type="text"
-          id="profession"
-          value={preferences.profession}
-          onChange={(e) => {
-            const updatedPreferences = { ...preferences, profession: e.target.value };
-            setPreferences(updatedPreferences);
-          }}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
-          required
-        />
+        <div className="flex gap-2 mb-2">
+          <input
+            type="text"
+            id="profession"
+            value={preferences.profession}
+            onChange={(e) => {
+              const updatedPreferences = { ...preferences, profession: e.target.value };
+              setPreferences(updatedPreferences);
+            }}
+            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            placeholder="请输入职业/研究领域"
+            required
+          />
+          <button
+            type="button"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 invisible"
+          >
+            添加
+          </button>
+        </div>
       </div>
 
       <div>
@@ -92,8 +101,8 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
             type="text"
             value={newInterest}
             onChange={(e) => setNewInterest(e.target.value)}
-            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
-            placeholder="输入研究方向"
+            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            placeholder="请输入感兴趣的研究方向"
           />
           <button
             type="button"
@@ -131,8 +140,8 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
             type="text"
             value={newNonInterest}
             onChange={(e) => setNewNonInterest(e.target.value)}
-            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
-            placeholder="输入研究方向"
+            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            placeholder="请输入不感兴趣的研究方向"
           />
           <button
             type="button"

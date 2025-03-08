@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.0",
+    "@heroicons/react": "^2.2.0",
     "@upstash/redis": "^1.34.4",
     "axios": "^1.7.9",
     "next": "15.1.7",
