@@ -13,15 +13,20 @@ function getCacheKey(paperId: string, userId: string): string {
 export async function POST(request: Request) {
   try {
     // 获取请求参数
-    const { paper, preference, userId } = await request.json() as {
+    const { paper, userpreference, userId } = await request.json() as {
       paper: ArxivPaper;
-      preference: UserPreference;
+      userpreference: UserPreference;
       userId: string;
     };
+    // 确保preference对象存在
+    const preference = userpreference || {};
     // 验证环境变量
-    const API_KEY = process.env.OPENAI_API_KEY;
-    const API_BASE_URL = process.env.OPENAI_API_BASE_URL;
-    const API_MODEL = process.env.OPENAI_MODEL;
+    // const API_KEY = process.env.OPENAI_API_KEY;
+    // const API_BASE_URL = process.env.OPENAI_API_BASE_URL;
+    // const API_MODEL = process.env.OPENAI_MODEL;
+    const API_KEY = preference.apiConfig?.apiKey || null;
+    const API_BASE_URL = preference.apiConfig?.apiBaseUrl || null;
+    const API_MODEL = preference.apiConfig?.model || null;
 
     if (!API_KEY) {
       throw new Error('OpenAI API密钥未配置，请在Vercel项目设置中配置OPENAI_API_KEY');

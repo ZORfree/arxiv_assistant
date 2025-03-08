@@ -28,25 +28,27 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
 
   useEffect(() => {
     try {
-      const savedApiConfig = localStorage.getItem('api_config');
-      if (savedApiConfig) {
-        const parsedApiConfig = JSON.parse(savedApiConfig);
+      const savedPreferences = localStorage.getItem('user_preferences');
+      if (savedPreferences) {
+        const parsedPreferences = JSON.parse(savedPreferences);
         setPreferences(prev => ({
           ...prev,
-          apiConfig: parsedApiConfig
+          ...parsedPreferences
         }));
       }
     } catch (error) {
-      console.error('Error loading API config from localStorage:', error);
+      console.error('Error loading preferences from localStorage:', error);
     }
   }, []);
 
   const handleSave = () => {
-    if (preferences.apiConfig) {
-      localStorage.setItem('api_config', JSON.stringify(preferences.apiConfig));
+    try {
+      localStorage.setItem('user_preferences', JSON.stringify(preferences));
+      onSave(preferences);
+      onClose();
+    } catch (error) {
+      console.error('Error saving preferences to localStorage:', error);
     }
-    onSave(preferences);
-    onClose();
   };
 
   return (
@@ -117,7 +119,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                             ...newPreferences
                           };
                           setPreferences(updatedPreferences);
-                          handleSave();
+                          // 移除这里的handleSave()调用，让用户可以通过底部的保存按钮统一保存所有设置
                         }}
                         initialPreferences={preferences}
                       />

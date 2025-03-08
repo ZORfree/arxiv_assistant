@@ -21,12 +21,11 @@ export interface PaperAnalysis {
 }
 
 export class AIService {
-  private static readonly MAX_CONCURRENT_ANALYSIS = Number(process.env.MAX_CONCURRENT_REQUESTS || '2');
-  
-  private static validateMaxConcurrent() {
-    const max = this.MAX_CONCURRENT_ANALYSIS;
+  private static validateMaxConcurrent(preference: UserPreference) {
+    const max = preference.apiConfig?.maxConcurrentRequests || 2;
+    console.info('[AI] 最大请求次数设置为: ', max);
     if (isNaN(max) || max < 1 || max > 10) {
-      console.warn('[AI] Invalid MAX_CONCURRENT_ANALYSIS value, using default: 2');
+      console.warn('[AI] Invalid maxConcurrentRequests value in user preferences, using default: 2');
       return 2;
     }
     return max;
@@ -37,19 +36,27 @@ export class AIService {
     title: string;
     summary: string;
     categories: string[];
-  }, preference: UserPreference): Promise<PaperAnalysis> {
+  }, userpreference: UserPreference): Promise<PaperAnalysis> {
     try {
       const userId = UserService.getUserId();
       if (!userId) {
         throw new Error('User ID not found');
       }
   
-      const response = await fetch('/api/analyze', {
+      if (!userpreference.apiConfig) {
+        throw new Error('API configuration not found in user preferences');
+      }
+  
+      const response = await fetch(`/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ paper, preference, userId })
+        body: JSON.stringify({ 
+          paper, 
+          userpreference, 
+          userId,
+        })
       });
   
       if (!response.ok) {
@@ -70,7 +77,7 @@ export class AIService {
     summary: string;
     categories: string[];
   }>, preference: UserPreference): Promise<PaperAnalysis[]> {
-    const maxConcurrent = this.validateMaxConcurrent();
+    const maxConcurrent = this.validateMaxConcurrent(preference);
     const results: PaperAnalysis[] = new Array(papers.length);
     const failureResult: PaperAnalysis = {
       isRelevant: false,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserPreference } from '@/lib/ai';
 
 interface PreferenceFormProps {
@@ -18,47 +18,54 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
   const [newInterest, setNewInterest] = useState('');
   const [newNonInterest, setNewNonInterest] = useState('');
 
+  // 当preferences发生变化时，调用onSave回调函数
+  useEffect(() => {
+    // 避免初始化时触发保存
+    if (JSON.stringify(preferences) !== JSON.stringify(initialPreferences)) {
+      onSave(preferences);
+    }
+  }, [preferences, onSave, initialPreferences]);
+
   const handleAddInterest = () => {
     if (newInterest.trim() && !preferences.interests.includes(newInterest.trim())) {
-      setPreferences(prev => ({
-        ...prev,
-        interests: [...prev.interests, newInterest.trim()]
-      }));
+      const updatedPreferences = {
+        ...preferences,
+        interests: [...preferences.interests, newInterest.trim()]
+      };
+      setPreferences(updatedPreferences);
       setNewInterest('');
     }
   };
 
   const handleAddNonInterest = () => {
     if (newNonInterest.trim() && !preferences.nonInterests.includes(newNonInterest.trim())) {
-      setPreferences(prev => ({
-        ...prev,
-        nonInterests: [...prev.nonInterests, newNonInterest.trim()]
-      }));
+      const updatedPreferences = {
+        ...preferences,
+        nonInterests: [...preferences.nonInterests, newNonInterest.trim()]
+      };
+      setPreferences(updatedPreferences);
       setNewNonInterest('');
     }
   };
 
   const handleRemoveInterest = (interest: string) => {
-    setPreferences(prev => ({
-      ...prev,
-      interests: prev.interests.filter(i => i !== interest)
-    }));
+    const updatedPreferences = {
+      ...preferences,
+      interests: preferences.interests.filter(i => i !== interest)
+    };
+    setPreferences(updatedPreferences);
   };
 
   const handleRemoveNonInterest = (nonInterest: string) => {
-    setPreferences(prev => ({
-      ...prev,
-      nonInterests: prev.nonInterests.filter(i => i !== nonInterest)
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPreferences(prev => ({ ...prev }));
+    const updatedPreferences = {
+      ...preferences,
+      nonInterests: preferences.nonInterests.filter(i => i !== nonInterest)
+    };
+    setPreferences(updatedPreferences);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
       <div>
         <label htmlFor="profession" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
           职业/研究领域
@@ -67,7 +74,10 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
           type="text"
           id="profession"
           value={preferences.profession}
-          onChange={(e) => setPreferences(prev => ({ ...prev, profession: e.target.value }))}
+          onChange={(e) => {
+            const updatedPreferences = { ...preferences, profession: e.target.value };
+            setPreferences(updatedPreferences);
+          }}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
           required
         />
@@ -150,6 +160,6 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
           ))}
         </div>
       </div>
-    </form>
+    </div>
   );
 }
