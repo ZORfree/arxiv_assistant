@@ -37,6 +37,7 @@ export async function POST(request: Request) {
     if (!API_BASE_URL) {
       throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置OPENAI_API_BASE_URL');
     }
+    console.log(`[AI] 获取到API密钥: ${API_KEY}; API_URL: ${API_BASE_URL}; API_MODEL: ${API_MODEL}`);
     // 从论文URL中提取论文ID（格式为：xxxx.xxxxx或xxxx.xxxxxvx）
     // console.log(`[TTTTTTTTTTTTT]获取到论文URL：${paper.link}`);
     const paperId = paper.link.match(/\d+\.\d+(?:v\d+)?/)?.[0];
