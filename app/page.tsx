@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { ArxivAPI, ArxivPaper, ArxivSearchParams } from '@/lib/arxiv';
 import { AIService, UserPreference } from '@/lib/ai';
-import PreferenceForm from './components/PreferenceForm';
 import SearchForm from './components/SearchForm';
 import PaperList from './components/PaperList';
 import Settings from './components/Settings';

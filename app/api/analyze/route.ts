@@ -50,8 +50,8 @@ export async function POST(request: Request) {
     if (cached) {
       // 检查缓存是否过期
       if (Date.now() - cached.timestamp <= CACHE_EXPIRY * 1000) {
-        console.log(`[Cache] 使用缓存的分析结果：${paper.title}`);
         const { timestamp, ...analysis } = cached;
+        console.log(`[Cache] 使用缓存的分析结果：${paper.title}, 缓存时间：${timestamp}`);
         return NextResponse.json(analysis);
       } else {
         // 缓存过期，删除
