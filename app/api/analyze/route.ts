@@ -37,22 +37,22 @@ export async function POST(request: Request) {
     if (!API_BASE_URL) {
       throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置OPENAI_API_BASE_URL');
     }
-    console.log(`[AI] 获取到API密钥: ${API_KEY}; API_URL: ${API_BASE_URL}; API_MODEL: ${API_MODEL}`);
+    // console.log(`[AI] 获取到API密钥: ${API_KEY}; API_URL: ${API_BASE_URL}; API_MODEL: ${API_MODEL}`);
     // 从论文URL中提取论文ID（格式为：xxxx.xxxxx或xxxx.xxxxxvx）
-    // console.log(`[TTTTTTTTTTTTT]获取到论文URL：${paper.link}`);
-    const paperId = paper.link.match(/\d+\.\d+(?:v\d+)?/)?.[0];
-    if (!paperId) {
-      throw new Error('无法从论文URL中提取论文ID');
-    }
+    console.log(`[TTTTTTTTTTTTT]获取到论文ID：${paper.id}`);
+    // const paperId = paper.link.match(/\d+\.\d+(?:v\d+)?/)?.[0];
+    // if (!paperId) {
+    //   throw new Error('无法从论文URL中提取论文ID');
+    // }
     // 尝试从缓存获取
-    const cacheKey = getCacheKey(paperId, userId);
+    const cacheKey = getCacheKey(paper.id, userId);
     const cached = await redis.get<PaperAnalysis & { timestamp: number }>(cacheKey);
     
     if (cached) {
       // 检查缓存是否过期
       if (Date.now() - cached.timestamp <= CACHE_EXPIRY * 1000) {
         const { timestamp, ...analysis } = cached;
-        console.log(`[Cache] 使用缓存的分析结果：${paper.title}, 缓存时间：${timestamp}`);
+        console.log(`[Cache] 使用缓存的分析结果：${paper.title}, 缓存时间：${new Date(timestamp).toISOString().replace('T', ' ').slice(0, 19)}`);
         return NextResponse.json(analysis);
       } else {
         // 缓存过期，删除
@@ -62,20 +62,42 @@ export async function POST(request: Request) {
     console.log(`[AI] [${new Date().toLocaleString()}] 开始分析论文：${paper.title}`);
     console.log(`[AI] 使用模型：${API_MODEL}`);
     
-    const prompt = `作为一个AI助手，请基于以下信息分析这篇论文是否与用户相关：
+//     const prompt = `作为一个AI助手，请基于以下信息分析这篇论文是否与用户相关：
 
-用户信息：
-- 职业：${preference.profession}
-- 感兴趣的方向：${preference.interests.join(', ')}
-- 不感兴趣的方向：${preference.nonInterests.join(', ')}
+// 用户信息：
+// - 职业：${preference.profession}
+// - 感兴趣的方向：${preference.interests.join(', ')}
+// - 不感兴趣的方向：${preference.nonInterests.join(', ')}
 
-论文信息：
-- 标题：${paper.title}
-- 摘要：${paper.summary}
-- 分类：${paper.categories.join(', ')}
+// 论文信息：
+// - 标题：${paper.title}
+// - 摘要：${paper.summary}
+// - 分类：${paper.categories.join(', ')}
 
-请分析这篇论文是否与用户的研究方向和兴趣相关，并给出理由，以及完成对标题和摘要进行专业翻译为中文。请返回严格符合JSON格式的内容，不要包含多余的标记或解释，但要注意对特殊字符进行转义，
-如：{"titleTrans":string (标题翻译内容),"summaryTrans":string (摘要翻译内容),"isRelevant":boolean (是否相关),"reason": string (原因说明,中文),"score": number (相关度评分，0-100)}`;
+// 请分析这篇论文是否与用户的研究方向和兴趣相关，并给出理由，以及完成对标题和摘要进行专业翻译为中文。请返回严格符合JSON格式的内容，不要包含多余的标记或解释，尤其要注意对所有的特殊字符进行转义，
+// 如：{"titleTrans":string (标题翻译内容),"summaryTrans":string (摘要翻译内容),"isRelevant":boolean (是否相关),"reason": string (原因说明,中文),"score": number (相关度评分，0-100)}`;
+
+    const prompt = `{
+      "task": "As an AI assistant, please analyze whether this paper is relevant to the user based on the following user_information and paper_information, provide the reasons and score(0-100), and complete a professional translation of the title and abstract into Chinese.",
+      "restriction": "Return the content strictly in JSON format, without any additional tags or explanations, do not to escaping any special characters,like the output given below",
+      "user_information": {
+          "profession": ${preference.profession},
+          "interest": ${preference.interests.join(', ')},
+          "disinterest": ${preference.nonInterests.join(', ')}
+      },
+      "paper_information": {
+          "title": ${paper.title.replace(/[\r\n]+/g, '')},
+          "abstract": ${paper.summary.replace(/[\r\n]+/g, '')},
+          "category": ${paper.categories.join(', ')}
+      },
+      "output": {
+          "titleTrans": "Chinese translation of title",
+          "summaryTrans": "Chinese translation of summary",
+          "isRelevant": "The correlation you give, needs to be the boolean type",
+          "reason": "Your provide reasons",
+          "score": "The score you give, needs to be the int type"
+      }
+    }`;
 
     console.log('[AI] 正在调用OpenAI API...');
     const apiUrl = `${API_BASE_URL}/chat/completions`;
@@ -84,7 +106,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'system',
-          content: '你是一个专业的学术论文分析助手，擅长根据用户背景分析论文相关性。'
+          content: 'You are a professional academic paper analysis assistant, adept at assessing the relevance of papers based on the user backgrounds'
         },
         {
           role: 'user',
@@ -99,7 +121,8 @@ export async function POST(request: Request) {
       }
     });
 
-    const result = JSON.parse(response.data.choices[0].message.content) as PaperAnalysis;
+    // console.log(`[AI] 请求返回内容：${response.data.choices[0].message.content.replace(/[\r\n]+/g, '').replace(/\\/g, '\\\\')}`);
+    const result = JSON.parse(response.data.choices[0].message.content.replace(/[\r\n]+/g, '').replace(/\\/g, '\\\\')) as PaperAnalysis;
     console.log(`[AI] 分析完成，相关度：${result.score}%`);
     
     // 保存到缓存

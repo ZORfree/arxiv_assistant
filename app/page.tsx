@@ -67,7 +67,8 @@ export default function Home() {
         title: paper.title,
         summary: paper.summary,
         categories: paper.categories,
-        link: paper.link
+        link: paper.link,
+        id: paper.id
       }));
       
       // 创建一个进度更新函数
@@ -183,7 +184,8 @@ export default function Home() {
           title: paper.title,
           summary: paper.summary,
           categories: paper.categories,
-          link:paper.link
+          link:paper.link,
+          id:paper.id
         },
         preferences
       );

@@ -64,7 +64,7 @@ export default function PaperList({ papers, loading, currentPage, totalPapers, o
               <div>
                 <h3 className="text-lg font-semibold mb-2">
                   <a
-                    href={paper.link}
+                    href={`https://papers.cool/arxiv/${paper.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-900 hover:text-indigo-600 dark:text-gray-100 dark:hover:text-indigo-400"
@@ -79,6 +79,9 @@ export default function PaperList({ papers, loading, currentPage, totalPapers, o
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-200 mb-4">
                   {paper.authors.join(', ')}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  发布日期：{new Date(paper.published).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
                 <div className="space-y-2 mb-4">
                   <p className="text-sm text-gray-700 dark:text-gray-100">

@@ -133,7 +133,7 @@ export class ArxivAPI {
     // console.log('[ArXiv] 获取到论文：',data.feed.entry);
 
     return data.feed.entry.map((entry: ArxivEntry) => ({
-      id: entry.id[0],
+      id: entry.id[0].slice(21),
       title: entry.title[0],
       summary: entry.summary[0],
       authors: entry.author.map((author: ArxivAuthor) => author.name[0]),
