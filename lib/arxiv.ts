@@ -72,7 +72,12 @@ export class ArxivAPI {
 
       // 关键词搜索
       if (keyword) {
-        queryParts.push(`all:${keyword}`);
+        //keyword进行空格分割
+        const keywords = keyword.split(' ');
+        //遍历keywords
+        keywords.forEach((k) => {
+          queryParts.push(`all:${k}`);
+        })
       }
 
       // 分类查询
