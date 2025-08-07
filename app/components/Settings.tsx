@@ -313,10 +313,16 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                   success: response.data.success,
                                   message: response.data.message
                                 });
-                              } catch (error: any) {
+                              } catch (error) {
+                                // 将错误转换为AxiosError类型
+                                const axiosError = error as import('axios').AxiosError<{
+                                  message?: string;
+                                  details?: string;
+                                  error?: string;
+                                }>;
                                 // 获取详细的错误信息
-                                const errorMessage = error.response?.data?.message || '测试失败，请检查API配置';
-                                const errorDetails = error.response?.data?.details || error.response?.data?.error || '';
+                                const errorMessage = axiosError.response?.data?.message || '测试失败，请检查API配置';
+                                const errorDetails = axiosError.response?.data?.details || axiosError.response?.data?.error || '';
                                 
                                 setTestResult({
                                   success: false,

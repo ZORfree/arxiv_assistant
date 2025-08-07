@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+
+// 定义错误响应的接口
+interface ErrorResponse {
+  error?: string | { message?: string };
+  message?: string;
+  [key: string]: unknown;
+}
 
 export async function POST(request: Request) {
   try {
@@ -37,46 +44,48 @@ export async function POST(request: Request) {
 
     // 如果请求成功，返回成功信息
     return NextResponse.json({ success: true, message: 'API连接测试成功' });
-  } catch (error: any) {
-    console.error('[API] 测试连接失败:', error);
+  } catch (error) {
+    // 将错误转换为AxiosError类型
+    const axiosError = error as AxiosError<ErrorResponse>;
+    console.error('[API] 测试连接失败:', axiosError);
     
     // 获取详细的错误信息
     let errorMessage = '连接测试失败';
     let errorDetails = '未知错误';
     
     // 处理不同类型的错误
-    if (error.response) {
+    if (axiosError.response) {
       // 服务器返回了错误状态码
-      const status = error.response.status;
+      const status = axiosError.response.status;
       errorMessage = `API返回错误状态码: ${status}`;
       
       // 尝试获取API返回的详细错误信息
-      if (error.response.data) {
-        if (typeof error.response.data === 'string') {
-          errorDetails = error.response.data;
-        } else if (typeof error.response.data === 'object') {
+      if (axiosError.response.data) {
+        if (typeof axiosError.response.data === 'string') {
+          errorDetails = axiosError.response.data;
+        } else if (typeof axiosError.response.data === 'object') {
           // 处理常见的API错误格式
-          if (error.response.data.error) {
-            if (typeof error.response.data.error === 'string') {
-              errorDetails = error.response.data.error;
-            } else if (error.response.data.error.message) {
-              errorDetails = error.response.data.error.message;
+          if (axiosError.response.data.error) {
+            if (typeof axiosError.response.data.error === 'string') {
+              errorDetails = axiosError.response.data.error;
+            } else if (axiosError.response.data.error.message) {
+              errorDetails = axiosError.response.data.error.message;
             }
-          } else if (error.response.data.message) {
-            errorDetails = error.response.data.message;
+          } else if (axiosError.response.data.message) {
+            errorDetails = axiosError.response.data.message;
           } else {
-            errorDetails = JSON.stringify(error.response.data);
+            errorDetails = JSON.stringify(axiosError.response.data);
           }
         }
       }
-    } else if (error.request) {
+    } else if (axiosError.request) {
       // 请求已发送但没有收到响应
       errorMessage = '无法连接到API服务器';
       errorDetails = '请检查API基础URL是否正确，以及网络连接是否正常';
     } else {
       // 设置请求时发生错误
       errorMessage = '请求设置错误';
-      errorDetails = error.message || '未知错误';
+      errorDetails = axiosError.message || '未知错误';
     }
     
     // 返回详细的错误信息
@@ -84,7 +93,7 @@ export async function POST(request: Request) {
       { 
         success: false, 
         message: errorMessage,
-        error: error.message,
+        error: axiosError.message,
         details: errorDetails
       },
       { status: 500 }
