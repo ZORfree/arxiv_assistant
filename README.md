@@ -2,7 +2,7 @@
 
 一个基于Next.js开发的智能论文筛选工具，帮助研究者快速找到感兴趣的ArXiv论文。
 
-本项目所有代码均有claude-3.5-Sonnet and claude-3.7-Sonnet生成，包括本README.md
+本项目所有代码均由claude-3.5-Sonnet and claude-3.7-Sonnet生成，包括本README.md
 
 ## 主要功能
 

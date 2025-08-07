@@ -40,6 +40,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
+    details?: string;
   } | null>(null);
   
   // 检查API配置是否有效
@@ -313,9 +314,14 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                   message: response.data.message
                                 });
                               } catch (error: any) {
+                                // 获取详细的错误信息
+                                const errorMessage = error.response?.data?.message || '测试失败，请检查API配置';
+                                const errorDetails = error.response?.data?.details || error.response?.data?.error || '';
+                                
                                 setTestResult({
                                   success: false,
-                                  message: error.response?.data?.message || '测试失败，请检查API配置'
+                                  message: errorMessage,
+                                  details: errorDetails
                                 });
                               } finally {
                                 setTestingApi(false);
@@ -327,13 +333,22 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                           </button>
                           
                           {testResult && (
-                            <div className={`mt-3 flex items-center ${testResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              {testResult.success ? (
-                                <CheckCircleIcon className="h-5 w-5 mr-2" />
-                              ) : (
-                                <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+                            <div className={`mt-3 ${testResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              <div className="flex items-center">
+                                {testResult.success ? (
+                                  <CheckCircleIcon className="h-5 w-5 mr-2 flex-shrink-0" />
+                                ) : (
+                                  <ExclamationCircleIcon className="h-5 w-5 mr-2 flex-shrink-0" />
+                                )}
+                                <span className="text-sm font-medium">{testResult.message}</span>
+                              </div>
+                              
+                              {/* 显示详细错误信息 */}
+                              {!testResult.success && testResult.details && (
+                                <div className="mt-2 ml-7 text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800 whitespace-pre-wrap break-words">
+                                  {testResult.details}
+                                </div>
                               )}
-                              <span className="text-sm">{testResult.message}</span>
                             </div>
                           )}
                         </div>
