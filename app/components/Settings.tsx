@@ -6,7 +6,8 @@ import { Fragment } from 'react';
 import { Tab } from '@headlessui/react';
 import { UserPreference } from '@/lib/ai';
 import PreferenceForm from './PreferenceForm';
-import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import axios from 'axios';
 
 interface SettingsProps {
   onSave: (preferences: UserPreference) => void;
@@ -33,6 +34,13 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
     apiBaseUrl: false,
     model: false
   });
+  
+  // 添加API测试状态
+  const [testingApi, setTestingApi] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
   
   // 检查API配置是否有效
   const isApiConfigValid = () => {
@@ -280,6 +288,54 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                             required
                           />
+                        </div>
+                        
+                        {/* API测试按钮 */}
+                        <div className="mt-6">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 ${isApiConfigValid() ? 'bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600' : 'bg-green-400 dark:bg-green-400 cursor-not-allowed'}`}
+                            onClick={async () => {
+                              if (!isApiConfigValid()) return;
+                              
+                              setTestingApi(true);
+                              setTestResult(null);
+                              
+                              try {
+                                const response = await axios.post('/api/test', {
+                                  apiKey: preferences.apiConfig?.apiKey,
+                                  apiBaseUrl: preferences.apiConfig?.apiBaseUrl,
+                                  model: preferences.apiConfig?.model
+                                });
+                                
+                                setTestResult({
+                                  success: response.data.success,
+                                  message: response.data.message
+                                });
+                              } catch (error: any) {
+                                setTestResult({
+                                  success: false,
+                                  message: error.response?.data?.message || '测试失败，请检查API配置'
+                                });
+                              } finally {
+                                setTestingApi(false);
+                              }
+                            }}
+                            disabled={!isApiConfigValid() || testingApi}
+                          >
+                            {testingApi ? '测试中...' : '测试API连接'}
+                          </button>
+                          
+                          {testResult && (
+                            <div className={`mt-3 flex items-center ${testResult.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {testResult.success ? (
+                                <CheckCircleIcon className="h-5 w-5 mr-2" />
+                              ) : (
+                                <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+                              )}
+                              <span className="text-sm">{testResult.message}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Tab.Panel>
