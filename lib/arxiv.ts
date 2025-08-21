@@ -113,7 +113,8 @@ export class ArxivAPI {
           start,
           max_results: maxResults,
           sortBy: 'lastUpdatedDate',
-          sortOrder: 'descending'
+          sortOrder: 'descending',
+          timestamp: Date.now(), // 添加当前时间戳，避免缓存问题
         }
       });
 
