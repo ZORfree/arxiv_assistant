@@ -6,6 +6,7 @@ import { AIService, UserPreference } from '@/lib/ai';
 import SearchForm from './components/SearchForm';
 import PaperList from './components/PaperList';
 import Settings from './components/Settings';
+import VersionInfo from './components/VersionInfo';
 
 const PAPERS_PER_PAGE = 10;
 
@@ -231,9 +232,12 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
             ArXiv 论文筛选助手
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            设置您的研究偏好，让AI帮您找到感兴趣的论文
-          </p>
+          <div className="flex items-center space-x-2 mb-2">
+            <p className="text-gray-600 dark:text-gray-300">
+              设置您的研究偏好，让AI帮您找到感兴趣的论文
+            </p>
+            <VersionInfo />
+          </div>
         </div>
         {preferences && (
           <button
