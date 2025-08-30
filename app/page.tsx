@@ -267,6 +267,7 @@ export default function Home() {
                 showRelevantOnly={showRelevantOnly}
                 onShowRelevantOnlyChange={setShowRelevantOnly}
                 totalPapers={allPapers.length}
+                preferences={preferences}
               />
             </div>
             {isAnalyzing && (

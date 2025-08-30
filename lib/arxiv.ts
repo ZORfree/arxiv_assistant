@@ -22,6 +22,7 @@ export interface ArxivSearchParams {
   categories?: string[];
   startDate?: string;
   endDate?: string;
+  proxyUrl?: string; // 新增：代理URL参数
 }
 
 interface ArxivAuthor {
@@ -65,7 +66,7 @@ export class ArxivAPI {
 
   static async searchPapers(params: ArxivSearchParams, start = 0, maxResults = this.MAX_RESULTS): Promise<ArxivPaper[]> {
     try {
-      const { keyword, categories, startDate, endDate } = params;
+      const { keyword, categories, startDate, endDate, proxyUrl } = params;
       
       // 构建查询条件
       const queryParts = [];
@@ -99,15 +100,19 @@ export class ArxivAPI {
       // 组合所有查询条件
       const query = queryParts.join(' AND ') || '*:*';
 
+      // 构建最终的API URL，如果有代理URL则添加到前面
+      const finalUrl = proxyUrl ? `${proxyUrl}${this.BASE_URL}` : this.BASE_URL;
+
       console.log(`[ArXiv] 开始获取论文，查询参数：${JSON.stringify({
         query,
         start,
         maxResults,
         sortBy: 'submittedDate',//lastUpdatedDate
-        sortOrder: 'descending'
+        sortOrder: 'descending',
+        finalUrl
       })}`);
 
-      const response = await axios.get(this.BASE_URL, {
+      const response = await axios.get(finalUrl, {
         params: {
           search_query: query,
           start,

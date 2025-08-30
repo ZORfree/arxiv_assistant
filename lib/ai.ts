@@ -10,6 +10,7 @@ export interface UserPreference {
     model: string;
     maxConcurrentRequests: number;
   };
+  arxivProxyUrl?: string; // 新增：ArXiv代理URL配置，可选
 }
 
 export interface PaperAnalysis {
