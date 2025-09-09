@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { ArxivPaper } from '@/lib/arxiv';
 import { PaperAnalysis } from '@/lib/ai';
 
@@ -13,6 +14,30 @@ interface PaperListProps {
 }
 
 export default function PaperList({ papers, loading, currentPage, totalPapers, onPageChange, onRetryAnalysis }: PaperListProps) {
+  const [jumpToPage, setJumpToPage] = useState('');
+  const totalPages = Math.ceil(totalPapers / 10);
+
+  const handleJumpToPageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty string or valid numbers within the total page range
+    if (value === '' || (Number(value) >= 1 && Number(value) <= totalPages)) {
+      setJumpToPage(value);
+    }
+  };
+
+  const handleJumpToPageSubmit = () => {
+    const pageNumber = parseInt(jumpToPage, 10);
+    if (pageNumber >= 1 && pageNumber <= totalPages && pageNumber !== currentPage) {
+      onPageChange(pageNumber);
+    }
+    setJumpToPage(''); // Clear input after submission
+  };
+
+  const handleJumpToPageKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleJumpToPageSubmit();
+    }
+  };
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -37,8 +62,27 @@ export default function PaperList({ papers, loading, currentPage, totalPapers, o
               上一页
             </button>
             <span className="text-sm text-gray-700 dark:text-gray-200">
-              第 {currentPage} 页 / 共 {Math.ceil(totalPapers / 10)} 页
+              第 {currentPage} 页 / 共 {totalPages} 页
             </span>
+            <div className="flex items-center space-x-2">
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={jumpToPage}
+                onChange={handleJumpToPageChange}
+                onKeyDown={handleJumpToPageKeyDown}
+                placeholder="页码"
+                className="w-20 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+              />
+              <button
+                onClick={handleJumpToPageSubmit}
+                disabled={!jumpToPage || parseInt(jumpToPage, 10) === currentPage || parseInt(jumpToPage, 10) < 1 || parseInt(jumpToPage, 10) > totalPages}
+                className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-900"
+              >
+                跳转
+              </button>
+            </div>
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= Math.ceil(totalPapers / 10)}
@@ -144,8 +188,27 @@ export default function PaperList({ papers, loading, currentPage, totalPapers, o
             上一页
           </button>
           <span className="text-sm text-gray-700 dark:text-gray-200">
-            第 {currentPage} 页 / 共 {Math.ceil(totalPapers / 10)} 页
-          </span>
+              第 {currentPage} 页 / 共 {totalPages} 页
+            </span>
+            <div className="flex items-center space-x-2">
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={jumpToPage}
+                onChange={handleJumpToPageChange}
+                onKeyDown={handleJumpToPageKeyDown}
+                placeholder="页码"
+                className="w-20 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+              />
+              <button
+                onClick={handleJumpToPageSubmit}
+                disabled={!jumpToPage || parseInt(jumpToPage, 10) === currentPage || parseInt(jumpToPage, 10) < 1 || parseInt(jumpToPage, 10) > totalPages}
+                className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-900"
+              >
+                跳转
+              </button>
+            </div>
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage >= Math.ceil(totalPapers / 10)}
