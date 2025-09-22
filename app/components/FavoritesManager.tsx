@@ -140,50 +140,52 @@ export default function FavoritesManager({ onClose }: FavoritesManagerProps) {
           </div>
 
           {/* 分类列表 */}
-          <div className="space-y-3">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               收藏分类
             </h3>
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <span className={`px-3 py-1 text-sm rounded-full ${category.color}`}>
-                      {category.name}
-                    </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {FavoritesService.getFavoritesStats().byCategory[category.id] || 0} 篇论文
-                    </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-3">
+                      <span className={`px-3 py-1 text-sm rounded-full ${category.color} whitespace-nowrap`}>
+                        {category.name}
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        {FavoritesService.getFavoritesStats().byCategory[category.id] || 0} 篇
+                      </span>
+                    </div>
+                    {category.description && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">
+                        {category.description}
+                      </p>
+                    )}
                   </div>
-                  {category.description && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                      {category.description}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setEditingCategory(category)}
-                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full dark:hover:bg-indigo-900/20"
-                    title="编辑"
-                  >
-                    <PencilIcon className="h-4 w-4" />
-                  </button>
-                  {!DEFAULT_CATEGORIES.find(cat => cat.id === category.id) && (
+                  <div className="flex items-center space-x-1 ml-2">
                     <button
-                      onClick={() => handleDeleteCategory(category.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full dark:hover:bg-red-900/20"
-                      title="删除"
+                      onClick={() => setEditingCategory(category)}
+                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full dark:hover:bg-indigo-900/20"
+                      title="编辑"
                     >
-                      <TrashIcon className="h-4 w-4" />
+                      <PencilIcon className="h-4 w-4" />
                     </button>
-                  )}
+                    {!DEFAULT_CATEGORIES.find(cat => cat.id === category.id) && (
+                      <button
+                        onClick={() => handleDeleteCategory(category.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full dark:hover:bg-red-900/20"
+                        title="删除"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

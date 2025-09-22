@@ -2,11 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { HeartIcon, FolderIcon, ChartBarIcon } from '@heroicons/react/24/outline';
-import { FavoritesService } from '@/lib/favorites';
+import { FavoritesService, FavoriteCategory } from '@/lib/favorites';
+
+interface FavoritesStats {
+  total: number;
+  byCategory: Record<string, number>;
+}
 
 export default function FavoritesStats() {
-  const [stats, setStats] = useState({ total: 0, byCategory: {} });
-  const [categories, setCategories] = useState([]);
+  const [stats, setStats] = useState<FavoritesStats>({ total: 0, byCategory: {} });
+  const [categories, setCategories] = useState<FavoriteCategory[]>([]);
 
   useEffect(() => {
     const updateStats = () => {

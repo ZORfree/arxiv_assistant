@@ -92,7 +92,7 @@ function CategorySelectionModal({ paper, categories, onSelect, onClose }: Catego
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -119,14 +119,14 @@ function CategorySelectionModal({ paper, categories, onSelect, onClose }: Catego
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                 选择分类
               </label>
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
                 {categories.map((category) => (
                   <label
                     key={category.id}
-                    className="flex items-center p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className="flex items-center p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <input
                       type="radio"
@@ -136,14 +136,14 @@ function CategorySelectionModal({ paper, categories, onSelect, onClose }: Catego
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="mr-3 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 text-xs rounded-full ${category.color}`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${category.color} whitespace-nowrap`}>
                           {category.name}
                         </span>
                       </div>
                       {category.description && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
                           {category.description}
                         </p>
                       )}

@@ -235,106 +235,140 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen p-8 space-y-8 bg-gray-50 dark:bg-gray-900">
-      <header className="max-w-4xl mx-auto flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            ArXiv 论文筛选助手
-          </h1>
-          <div className="flex items-center space-x-2 mb-2">
-            <p className="text-gray-600 dark:text-gray-300">
-              设置您的研究偏好，让AI帮您找到感兴趣的论文
-            </p>
-            <VersionInfo />
-            <FavoritesGuide />
-          </div>
-        </div>
-        {preferences && (
-          <div className="flex space-x-3">
-            <button
-              onClick={() => setShowFavorites(true)}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center space-x-2"
-            >
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              </svg>
-              <span>收藏夹</span>
-            </button>
-            <button
-              onClick={() => setShowPreferences(true)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
-              设置
-            </button>
-          </div>
-        )}
-      </header>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* 三栏布局容器 */}
+      <div className="flex min-h-screen">
+        {/* 左侧空白区域 (1份宽度) */}
+        <div className="flex-1 hidden xl:block"></div>
+        
+        {/* 中间主内容区域 (2份宽度) */}
+        <main className="flex-[2] p-8 space-y-8">
+          {/* 头部 */}
+          <header>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              ArXiv 论文筛选助手
+            </h1>
+            <div className="flex items-center space-x-2 mb-2">
+              <p className="text-gray-600 dark:text-gray-300">
+                设置您的研究偏好，让AI帮您找到感兴趣的论文
+              </p>
+              <VersionInfo />
+              <FavoritesGuide />
+            </div>
+          </header>
 
-      <main className="max-w-4xl mx-auto space-y-8">
-        {showPreferences && (
-          <Settings
-            onSave={handlePreferenceSave}
-            initialPreferences={preferences || undefined}
-            onClose={() => setShowPreferences(false)}
-          />
-        )}
+          {/* 主要内容 */}
+          <div className="space-y-8">
+          {showPreferences && (
+            <Settings
+              onSave={handlePreferenceSave}
+              initialPreferences={preferences || undefined}
+              onClose={() => setShowPreferences(false)}
+            />
+          )}
 
-        {preferences && (
-          <section className="space-y-6 w-full">
-            <div className="flex flex-col lg:flex-row gap-6">
-              {/* 主要内容区域 */}
-              <div className="flex-1 space-y-4">
-                <SearchForm
-                  onSearch={handleSearch}
-                  loading={loading}
-                  showRelevantOnly={showRelevantOnly}
-                  onShowRelevantOnlyChange={setShowRelevantOnly}
-                  totalPapers={allPapers.length}
-                  preferences={preferences}
-              />
-                {isAnalyzing && (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        正在分析论文 ({analyzedCount}/{totalAnalysisCount})
-                      </span>
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        {Math.round((analyzedCount / totalAnalysisCount) * 100)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                      <div
-                        className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500"
-                        style={{ width: `${(analyzedCount / totalAnalysisCount) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                
-                <PaperList
-                  papers={showRelevantOnly ? papers.filter(paper => paper.analysis?.isRelevant) : papers}
-                  loading={loading}
-                  currentPage={currentPage}
-                  totalPapers={allPapers.length}
-                  onPageChange={async (page) => {
-                    setCurrentPage(page);
-                    const startIndex = (page - 1) * PAPERS_PER_PAGE;
-                    const endIndex = startIndex + PAPERS_PER_PAGE;
-                    const pagePapers = allPapers.slice(startIndex, endIndex);
-                    await analyzePapers(pagePapers, preferences!);
-                  }}
-                  onRetryAnalysis={handleRetryAnalysis}
-                />
+          {preferences && (
+            <section className="space-y-4 w-full">
+              {/* 移动端按钮 - 只在小屏幕显示 */}
+              <div className="xl:hidden flex justify-end space-x-3 mb-4">
+                <button
+                  onClick={() => setShowFavorites(true)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center space-x-2 text-sm"
+                >
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                  <span>收藏夹</span>
+                </button>
+                <button
+                  onClick={() => setShowPreferences(true)}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm"
+                >
+                  设置
+                </button>
               </div>
 
-              {/* 侧边栏 */}
-              <aside className="lg:w-80 space-y-4">
+              <SearchForm
+                onSearch={handleSearch}
+                loading={loading}
+                showRelevantOnly={showRelevantOnly}
+                onShowRelevantOnlyChange={setShowRelevantOnly}
+                totalPapers={allPapers.length}
+              />
+              
+              {isAnalyzing && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      正在分析论文 ({analyzedCount}/{totalAnalysisCount})
+                    </span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      {Math.round((analyzedCount / totalAnalysisCount) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                    <div
+                      className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500"
+                      style={{ width: `${(analyzedCount / totalAnalysisCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <PaperList
+                papers={showRelevantOnly ? papers.filter(paper => paper.analysis?.isRelevant) : papers}
+                loading={loading}
+                currentPage={currentPage}
+                totalPapers={allPapers.length}
+                onPageChange={async (page) => {
+                  setCurrentPage(page);
+                  const startIndex = (page - 1) * PAPERS_PER_PAGE;
+                  const endIndex = startIndex + PAPERS_PER_PAGE;
+                  const pagePapers = allPapers.slice(startIndex, endIndex);
+                  await analyzePapers(pagePapers, preferences!);
+                }}
+                onRetryAnalysis={handleRetryAnalysis}
+              />
+            </section>
+          )}
+        </div>
+        </main>
+
+        {/* 右侧功能区域 (1份宽度) */}
+        <aside className="flex-1 hidden xl:block p-8 border-l border-gray-200 dark:border-gray-700">
+          <div className="sticky top-8 space-y-4 max-w-xs mx-auto">
+            {preferences && (
+              <>
+                {/* 操作按钮 */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    快捷操作
+                  </h3>
+                  <div className="flex flex-col items-center space-y-2">
+                    <button
+                      onClick={() => setShowFavorites(true)}
+                      className="w-24 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center space-x-1 text-sm"
+                    >
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                      <span>收藏夹</span>
+                    </button>
+                    <button
+                      onClick={() => setShowPreferences(true)}
+                      className="w-24 px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm"
+                    >
+                      设置偏好
+                    </button>
+                  </div>
+                </div>
+                
                 <FavoritesStats />
-              </aside>
-            </div>
-          </section>
-        )}
-      </main>
+              </>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
