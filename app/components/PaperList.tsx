@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArxivPaper } from '@/lib/arxiv';
 import { PaperAnalysis } from '@/lib/ai';
+import FavoriteButton from './FavoriteButton';
 
 interface PaperListProps {
   papers: Array<ArxivPaper & { analysis?: PaperAnalysis }>;
@@ -106,21 +107,26 @@ export default function PaperList({ papers, loading, currentPage, totalPapers, o
           >
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">
-                  <a
-                    href={`https://papers.cool/arxiv/${paper.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-900 hover:text-indigo-600 dark:text-gray-100 dark:hover:text-indigo-400"
-                  >
-                    {paper.title}
-                  </a>
-                  {paper.analysis?.titleTrans && (
-                    <div className="mt-1 text-base text-gray-600 dark:text-gray-300">
-                      {paper.analysis.titleTrans}
-                    </div>
-                  )}
-                </h3>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-lg font-semibold flex-1">
+                    <a
+                      href={`https://papers.cool/arxiv/${paper.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-900 hover:text-indigo-600 dark:text-gray-100 dark:hover:text-indigo-400"
+                    >
+                      {paper.title}
+                    </a>
+                    {paper.analysis?.titleTrans && (
+                      <div className="mt-1 text-base text-gray-600 dark:text-gray-300">
+                        {paper.analysis.titleTrans}
+                      </div>
+                    )}
+                  </h3>
+                  <div className="ml-4 flex-shrink-0">
+                    <FavoriteButton paper={paper} />
+                  </div>
+                </div>
                 <p className="text-sm text-gray-600 dark:text-gray-200 mb-4">
                   {paper.authors.join(', ')}
                 </p>
