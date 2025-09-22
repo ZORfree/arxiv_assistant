@@ -297,15 +297,17 @@ export default function Home() {
         {preferences && (
           <div className="flex flex-col lg:flex-row gap-6">
             {/* 左侧边栏：快捷操作和收藏统计 */}
-            <aside className="lg:w-80 space-y-6">
+            <aside className="lg:w-64 space-y-6">
               {/* 快捷操作 */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-                  <svg className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center space-x-2 mb-3">
+                  <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  快捷操作
-                </h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                    快捷操作
+                  </h3>
+                </div>
                 <div className="space-y-3">
                   <button
                     onClick={() => setShowFavorites(true)}
