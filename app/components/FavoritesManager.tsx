@@ -72,7 +72,7 @@ export default function FavoritesManager({ onClose }: FavoritesManagerProps) {
         } else {
           alert('导入失败，请检查文件格式。');
         }
-      } catch (error) {
+      } catch {
         alert('导入失败，请检查文件格式。');
       }
     };

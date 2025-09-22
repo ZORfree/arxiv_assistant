@@ -112,12 +112,14 @@ export class FavoritesService {
   }
 
   // 添加收藏
-  static addFavorite(paper: any, categoryId: string, notes?: string): FavoritePaper {
+  static addFavorite(paper: { id: string; title: string; authors: string[]; summary: string; published: string; updated?: string; link: string; categories?: string[] }, categoryId: string, notes?: string): FavoritePaper {
     const favorites = this.getFavorites();
     const favoriteId = `fav_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const favoritePaper: FavoritePaper = {
       ...paper,
+      updated: paper.updated || paper.published, // 如果没有 updated 字段，使用 published 作为默认值
+      categories: paper.categories || [], // 确保 categories 是数组
       favoriteId,
       categoryId,
       favoritedAt: new Date().toISOString(),

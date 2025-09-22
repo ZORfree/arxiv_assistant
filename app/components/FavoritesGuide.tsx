@@ -55,7 +55,7 @@ export default function FavoritesGuide() {
                     <p>2. 点击空心❤️图标开始收藏</p>
                     <p>3. 选择合适的分类（识别、唤醒、大模型等）</p>
                     <p>4. 可选择添加个人备注</p>
-                    <p>5. 点击"收藏"按钮完成</p>
+                    <p>5. 点击&ldquo;收藏&rdquo;按钮完成</p>
                     <p>6. 已收藏的论文会显示实心❤️图标</p>
                   </div>
                 </section>
@@ -113,7 +113,7 @@ export default function FavoritesGuide() {
                     🗂️ 收藏夹管理
                   </h3>
                   <div className="space-y-2 text-gray-600 dark:text-gray-300">
-                    <p>• <strong>查看收藏：</strong>点击页面右上角的"收藏夹"按钮</p>
+                    <p>• <strong>查看收藏：</strong>点击页面右上角的&ldquo;收藏夹&rdquo;按钮</p>
                     <p>• <strong>分类筛选：</strong>在收藏夹左侧选择不同分类查看</p>
                     <p>• <strong>搜索功能：</strong>支持按标题、摘要、作者、备注搜索</p>
                     <p>• <strong>编辑收藏：</strong>点击论文卡片上的编辑按钮修改分类或备注</p>

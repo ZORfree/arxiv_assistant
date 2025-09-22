@@ -5,9 +5,10 @@ import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { FavoritesService, FavoriteCategory } from '@/lib/favorites';
 import { ArxivPaper } from '@/lib/arxiv';
+import { PaperAnalysis } from '@/lib/ai';
 
 interface FavoriteButtonProps {
-  paper: ArxivPaper & { analysis?: any };
+  paper: ArxivPaper & { analysis?: PaperAnalysis };
   onFavoriteChange?: (isFavorited: boolean) => void;
   quickFavorite?: boolean; // 是否启用快速收藏（直接收藏到"其他"分类）
 }
@@ -75,7 +76,7 @@ export default function FavoriteButton({ paper, onFavoriteChange, quickFavorite 
 }
 
 interface CategorySelectionModalProps {
-  paper: ArxivPaper & { analysis?: any };
+  paper: ArxivPaper & { analysis?: PaperAnalysis };
   categories: FavoriteCategory[];
   onSelect: (categoryId: string, notes?: string) => void;
   onClose: () => void;
