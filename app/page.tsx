@@ -285,13 +285,11 @@ export default function Home() {
       {/* 主内容区域 */}
       <div className="max-w-6xl mx-auto px-4 py-6">
         {showPreferences && (
-          <div className="mb-8">
-            <Settings
-              onSave={handlePreferenceSave}
-              initialPreferences={preferences || undefined}
-              onClose={() => setShowPreferences(false)}
-            />
-          </div>
+          <Settings
+            onSave={handlePreferenceSave}
+            initialPreferences={preferences || undefined}
+            onClose={() => setShowPreferences(false)}
+          />
         )}
 
         {preferences && (

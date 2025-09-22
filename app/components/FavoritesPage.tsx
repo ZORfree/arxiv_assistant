@@ -57,8 +57,7 @@ export default function FavoritesPage({ onClose }: FavoritesPageProps) {
   const stats = FavoritesService.getFavoritesStats();
 
   return (
-    <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900 z-50 overflow-y-auto">
-      <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* 头部 */}
         <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-6xl mx-auto px-4 py-4">
@@ -98,7 +97,7 @@ export default function FavoritesPage({ onClose }: FavoritesPageProps) {
             {/* 侧边栏 */}
             <aside className="lg:w-64 space-y-6">
               {/* 搜索 */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
@@ -112,7 +111,7 @@ export default function FavoritesPage({ onClose }: FavoritesPageProps) {
               </div>
 
               {/* 分类筛选 */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
                   <FolderIcon className="h-4 w-4 mr-2" />
                   分类筛选
@@ -156,7 +155,7 @@ export default function FavoritesPage({ onClose }: FavoritesPageProps) {
             </aside>
 
             {/* 主内容区 */}
-            <main className="flex-1">
+            <main className="flex-1 space-y-6">
               {filteredFavorites.length === 0 ? (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
                   <HeartIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -186,7 +185,6 @@ export default function FavoritesPage({ onClose }: FavoritesPageProps) {
             </main>
           </div>
         </div>
-      </div>
 
       {/* 编辑模态框 */}
       {editingPaper && (
