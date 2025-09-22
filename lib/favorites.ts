@@ -33,46 +33,10 @@ export interface FavoritePaper {
 // 预定义的收藏分类
 export const DEFAULT_CATEGORIES: FavoriteCategory[] = [
   {
-    id: 'recognition',
-    name: '识别类别',
+    id: 'default',
+    name: '默认收藏',
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
-    description: '图像识别、语音识别、模式识别等相关论文'
-  },
-  {
-    id: 'wakeup',
-    name: '唤醒类别',
-    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
-    description: '语音唤醒、关键词检测等相关论文'
-  },
-  {
-    id: 'llm',
-    name: '大模型类别',
-    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
-    description: '大语言模型、生成式AI等相关论文'
-  },
-  {
-    id: 'cv',
-    name: '计算机视觉',
-    color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100',
-    description: '计算机视觉、图像处理等相关论文'
-  },
-  {
-    id: 'nlp',
-    name: '自然语言处理',
-    color: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-100',
-    description: '自然语言处理、文本分析等相关论文'
-  },
-  {
-    id: 'ml',
-    name: '机器学习',
-    color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100',
-    description: '机器学习算法、深度学习等相关论文'
-  },
-  {
-    id: 'other',
-    name: '其他',
-    color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100',
-    description: '其他感兴趣的论文'
+    description: '默认收藏分类'
   }
 ];
 

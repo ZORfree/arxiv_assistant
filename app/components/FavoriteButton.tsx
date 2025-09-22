@@ -26,8 +26,8 @@ export default function FavoriteButton({ paper, onFavoriteChange, quickFavorite 
       onFavoriteChange?.(false);
     } else {
       if (quickFavorite || e.shiftKey) {
-        // 快速收藏到"其他"分类
-        FavoritesService.addFavorite(paper, 'other');
+        // 快速收藏到"默认收藏"分类
+        FavoritesService.addFavorite(paper, 'default');
         setIsFavorited(true);
         onFavoriteChange?.(true);
       } else {
@@ -53,7 +53,7 @@ export default function FavoriteButton({ paper, onFavoriteChange, quickFavorite 
             ? 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40'
             : 'text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
         }`}
-        title={isFavorited ? '取消收藏' : (quickFavorite ? '快速收藏到其他分类' : '收藏论文（Shift+点击快速收藏）')}
+        title={isFavorited ? '取消收藏' : (quickFavorite ? '快速收藏到默认收藏' : '收藏论文（Shift+点击快速收藏）')}
       >
         {isFavorited ? (
           <HeartSolidIcon className="h-5 w-5" />
