@@ -236,41 +236,31 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 三栏布局容器 */}
-      <div className="flex min-h-screen">
-        {/* 左侧空白区域 (1份宽度) */}
-        <div className="flex-1 hidden xl:block"></div>
-        
-        {/* 中间主内容区域 (2份宽度) */}
-        <main className="flex-[2] p-8 space-y-8">
-          {/* 头部 */}
-          <header>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              ArXiv 论文筛选助手
-            </h1>
-            <div className="flex items-center space-x-2 mb-2">
-              <p className="text-gray-600 dark:text-gray-300">
-                设置您的研究偏好，让AI帮您找到感兴趣的论文
-              </p>
+      {/* 头部标题区域 */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <svg className="h-8 w-8 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  ArXiv 论文筛选助手
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  设置您的研究偏好，让AI帮您找到感兴趣的论文
+                </p>
+              </div>
+            </div>
+            {/* 版本信息和指南 - 桌面端显示 */}
+            <div className="hidden lg:flex items-center space-x-2">
               <VersionInfo />
               <FavoritesGuide />
             </div>
-          </header>
-
-          {/* 主要内容 */}
-          <div className="space-y-8">
-          {showPreferences && (
-            <Settings
-              onSave={handlePreferenceSave}
-              initialPreferences={preferences || undefined}
-              onClose={() => setShowPreferences(false)}
-            />
-          )}
-
-          {preferences && (
-            <section className="space-y-4 w-full">
-              {/* 移动端按钮 - 只在小屏幕显示 */}
-              <div className="xl:hidden flex justify-end space-x-3 mb-4">
+            {/* 移动端快捷按钮 */}
+            {preferences && (
+              <div className="lg:hidden flex space-x-3">
                 <button
                   onClick={() => setShowFavorites(true)}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center space-x-2 text-sm"
@@ -287,7 +277,60 @@ export default function Home() {
                   设置
                 </button>
               </div>
+            )}
+          </div>
+        </div>
+      </header>
 
+      {/* 主内容区域 */}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {showPreferences && (
+          <div className="mb-8">
+            <Settings
+              onSave={handlePreferenceSave}
+              initialPreferences={preferences || undefined}
+              onClose={() => setShowPreferences(false)}
+            />
+          </div>
+        )}
+
+        {preferences && (
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* 左侧边栏：快捷操作和收藏统计 */}
+            <aside className="lg:w-80 space-y-6">
+              {/* 快捷操作 */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                  <svg className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  快捷操作
+                </h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowFavorites(true)}
+                    className="w-full px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center space-x-2 text-sm font-medium"
+                  >
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    <span>管理收藏夹</span>
+                  </button>
+                  <button
+                    onClick={() => setShowPreferences(true)}
+                    className="w-full px-4 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-medium"
+                  >
+                    设置研究偏好
+                  </button>
+                </div>
+              </div>
+              
+              {/* 收藏统计 */}
+              <FavoritesStats />
+            </aside>
+
+            {/* 右侧主内容：搜索表单和论文列表 */}
+            <main className="flex-1 space-y-6">
               <SearchForm
                 onSearch={handleSearch}
                 loading={loading}
@@ -329,45 +372,9 @@ export default function Home() {
                 }}
                 onRetryAnalysis={handleRetryAnalysis}
               />
-            </section>
-          )}
-        </div>
-        </main>
-
-        {/* 右侧功能区域 (1份宽度) */}
-        <aside className="flex-1 hidden xl:block p-8 border-l border-gray-200 dark:border-gray-700">
-          <div className="sticky top-8 space-y-4 max-w-xs mx-auto">
-            {preferences && (
-              <>
-                {/* 操作按钮 */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                    快捷操作
-                  </h3>
-                  <div className="flex flex-col items-center space-y-2">
-                    <button
-                      onClick={() => setShowFavorites(true)}
-                      className="w-24 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center space-x-1 text-sm"
-                    >
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                      </svg>
-                      <span>收藏夹</span>
-                    </button>
-                    <button
-                      onClick={() => setShowPreferences(true)}
-                      className="w-24 px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm"
-                    >
-                      设置偏好
-                    </button>
-                  </div>
-                </div>
-                
-                <FavoritesStats />
-              </>
-            )}
+            </main>
           </div>
-        </aside>
+        )}
       </div>
     </div>
   );
