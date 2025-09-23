@@ -64,6 +64,9 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
     details?: string;
   } | null>(null);
   
+  // 添加WebDAV恢复状态
+  const [restoringFromWebDAV, setRestoringFromWebDAV] = useState(false);
+  
   // 检查API配置是否有效
   const isApiConfigValid = () => {
     return !!preferences.apiConfig?.apiKey && 
@@ -791,6 +794,9 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                           const newWebdavConfig = ConfigService.getWebDAVConfig();
                                           setPreferences(newPreferences);
                                           setWebdavConfig(newWebdavConfig);
+                                          
+                                          // 通知父组件配置已更新
+                                          onSave(newPreferences);
                                         }
                                       } catch (error) {
                                         setImportExportResult({
@@ -954,16 +960,42 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                   }
 
                                   try {
-                                    setImportExportResult(null);
+                                    setRestoringFromWebDAV(true);
+                                    setImportExportResult({
+                                      success: true,
+                                      message: '正在连接WebDAV服务器...',
+                                      details: '正在获取备份文件列表'
+                                    });
+                                    
                                     const result = await ConfigService.restoreFromWebDAV();
-                                    setImportExportResult(result);
                                     
                                     if (result.success) {
+                                      setImportExportResult({
+                                        success: true,
+                                        message: '正在应用配置...',
+                                        details: '正在恢复用户偏好、收藏数据等'
+                                      });
+                                      
+                                      // 添加短暂延迟以显示进度
+                                      await new Promise(resolve => setTimeout(resolve, 500));
+                                      
                                       // 重新加载配置
                                       const newPreferences = ConfigService.getUserPreferences();
                                       const newWebdavConfig = ConfigService.getWebDAVConfig();
                                       setPreferences(newPreferences);
                                       setWebdavConfig(newWebdavConfig);
+                                      
+                                      // 通知父组件配置已更新
+                                      onSave(newPreferences);
+                                      
+                                      // 显示成功消息
+                                      setImportExportResult({
+                                        success: true,
+                                        message: '✅ 配置恢复成功！',
+                                        details: result.details
+                                      });
+                                    } else {
+                                      setImportExportResult(result);
                                     }
                                   } catch (error) {
                                     setImportExportResult({
@@ -971,16 +1003,28 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                       message: '从云端恢复失败',
                                       details: error instanceof Error ? error.message : '未知错误'
                                     });
+                                  } finally {
+                                    setRestoringFromWebDAV(false);
                                   }
                                 }}
-                                disabled={!webdavConfig.url}
+                                disabled={!webdavConfig.url || restoringFromWebDAV}
                                 className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-900 ${
-                                  webdavConfig.url
+                                  webdavConfig.url && !restoringFromWebDAV
                                     ? 'text-green-600 bg-white border border-green-600 hover:bg-green-50 dark:bg-gray-700 dark:text-green-400 dark:border-green-400 dark:hover:bg-gray-600'
                                     : 'text-gray-400 bg-gray-100 border border-gray-300 cursor-not-allowed dark:bg-gray-600 dark:text-gray-500 dark:border-gray-500'
                                 }`}
                               >
-                                从云端恢复
+                                {restoringFromWebDAV ? (
+                                  <div className="flex items-center">
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    恢复中...
+                                  </div>
+                                ) : (
+                                  '从云端恢复'
+                                )}
                               </button>
                             </div>
                             

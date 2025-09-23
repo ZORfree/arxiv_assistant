@@ -276,7 +276,8 @@ export class ConfigService {
     try {
       const webdavClient = new SmartWebDAVClient(webdavConfig);
       const configData = this.exportConfig();
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+      // 生成包含完整时间戳的文件名，确保唯一性
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_');
       const fileName = `paper-config-${timestamp}.json`;
       
       const result = await webdavClient.uploadFile(fileName, configData);
@@ -327,19 +328,40 @@ export class ConfigService {
         return {
           success: false,
           message: '无法获取WebDAV服务器上的文件列表',
-          details: listResult.message
+          details: `错误信息: ${listResult.message}
+
+调试信息:
+- WebDAV URL: ${webdavConfig.url}
+- 使用代理: ${webdavConfig.useProxy !== false ? '是' : '否'}
+- 连接方式: ${webdavClient.getConnectionType()}`
         };
       }
 
-      const configFiles = (listResult.files || [])
-        .filter((file: WebDAVFile) => file.name.startsWith('paper-config-') && file.name.endsWith('.json'))
+      const allFiles = listResult.files || [];
+
+      // 更宽松的文件名匹配，支持多种格式
+      const configFiles = allFiles
+        .filter((file: WebDAVFile) => {
+          const name = file.name.toLowerCase();
+          return (name.startsWith('paper-config') || name.includes('config')) && name.endsWith('.json');
+        })
         .sort((a: WebDAVFile, b: WebDAVFile) => b.lastModified.getTime() - a.lastModified.getTime()); // 按时间倒序排列
 
       if (configFiles.length === 0) {
         return {
           success: false,
           message: '在WebDAV服务器上没有找到配置备份文件',
-          details: '请先使用"同步到云端"功能创建配置备份'
+          details: `请先使用"同步到云端"功能创建配置备份。
+
+调试信息：
+- WebDAV URL: ${webdavConfig.url}
+- 使用代理: ${webdavConfig.useProxy !== false ? '是' : '否'}
+- 连接方式: ${webdavClient.getConnectionType()}
+- 服务器上共有 ${allFiles.length} 个文件
+- 文件列表: ${allFiles.map(f => `${f.name} (${f.size}字节)`).join(', ') || '无文件'}
+
+查找条件：文件名包含 'config' 并以 '.json' 结尾
+您的文件 'paper-config-2025-09-23.json' 应该匹配这个条件。`
         };
       }
 
@@ -351,7 +373,13 @@ export class ConfigService {
         return {
           success: false,
           message: '下载配置文件失败',
-          details: downloadResult.message
+          details: `文件名: ${latestFile.name}
+错误信息: ${downloadResult.message}
+
+调试信息:
+- WebDAV URL: ${webdavConfig.url}
+- 使用代理: ${webdavConfig.useProxy !== false ? '是' : '否'}
+- 连接方式: ${webdavClient.getConnectionType()}`
         };
       }
 
@@ -385,7 +413,11 @@ ${importResult.details || ''}`,
       return {
         success: false,
         message: 'WebDAV恢复失败',
-        details: error instanceof Error ? error.message : '未知错误'
+        details: `错误信息: ${error instanceof Error ? error.message : '未知错误'}
+
+调试信息:
+- WebDAV URL: ${webdavConfig.url}
+- 使用代理: ${webdavConfig.useProxy !== false ? '是' : '否'}`
       };
     }
   }
@@ -413,8 +445,12 @@ ${importResult.details || ''}`,
         };
       }
 
+      // 更宽松的文件名匹配，支持多种格式
       const configFiles = (listResult.files || [])
-        .filter((file: WebDAVFile) => file.name.startsWith('paper-config-') && file.name.endsWith('.json'))
+        .filter((file: WebDAVFile) => {
+          const name = file.name.toLowerCase();
+          return (name.startsWith('paper-config') || name.includes('config')) && name.endsWith('.json');
+        })
         .sort((a: WebDAVFile, b: WebDAVFile) => b.lastModified.getTime() - a.lastModified.getTime())
         .map((file: WebDAVFile) => ({
           name: file.name,

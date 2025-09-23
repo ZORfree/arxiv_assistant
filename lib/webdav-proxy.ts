@@ -179,9 +179,6 @@ export class WebDAVProxyClient {
    */
   async listFiles(): Promise<{ success: boolean; message: string; files?: WebDAVFile[] }> {
     try {
-      // 确保应用目录存在
-      await this.ensureDirectory('');
-      
       const result = await this.proxyRequest('PROPFIND', '', { 'Depth': '1' });
 
       if (result.success || result.status === 207) {
@@ -228,36 +225,80 @@ export class WebDAVProxyClient {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
       
-      const responses = xmlDoc.getElementsByTagName('response') || xmlDoc.getElementsByTagNameNS('DAV:', 'response');
+      // 尝试多种方式获取响应节点
+      let responses = xmlDoc.getElementsByTagNameNS('DAV:', 'response');
+      if (responses.length === 0) {
+        responses = xmlDoc.getElementsByTagName('d:response');
+      }
+      if (responses.length === 0) {
+        responses = xmlDoc.getElementsByTagName('response');
+      }
       
       for (let i = 0; i < responses.length; i++) {
         const response = responses[i];
         
-        // 获取文件路径
-        const hrefElement = response.getElementsByTagName('href')[0] || response.getElementsByTagNameNS('DAV:', 'href')[0];
-        if (!hrefElement) continue;
+        // 获取文件路径 - 尝试多种命名空间
+        let hrefElement = response.getElementsByTagNameNS('DAV:', 'href')[0];
+        if (!hrefElement) {
+          hrefElement = response.getElementsByTagName('d:href')[0];
+        }
+        if (!hrefElement) {
+          hrefElement = response.getElementsByTagName('href')[0];
+        }
+        
+        if (!hrefElement) {
+          continue;
+        }
         
         const href = hrefElement.textContent || '';
         const fileName = decodeURIComponent(href.split('/').pop() || '');
         
-        // 跳过目录本身和空文件名
-        if (!fileName || fileName === '' || href.endsWith('/paper-research-tool/')) {
+        // 更宽松的过滤条件
+        if (!fileName || fileName === '') {
           continue;
         }
         
-        // 获取文件大小
-        const sizeElement = response.getElementsByTagName('getcontentlength')[0] || response.getElementsByTagNameNS('DAV:', 'getcontentlength')[0];
+        // 只跳过明确的目录路径
+        if (href.endsWith('/paper-research-tool/') || href.endsWith('/paper-research-tool')) {
+          continue;
+        }
+        
+        // 获取文件大小 - 尝试多种命名空间
+        let sizeElement = response.getElementsByTagNameNS('DAV:', 'getcontentlength')[0];
+        if (!sizeElement) {
+          sizeElement = response.getElementsByTagName('d:getcontentlength')[0];
+        }
+        if (!sizeElement) {
+          sizeElement = response.getElementsByTagName('getcontentlength')[0];
+        }
         const size = sizeElement ? parseInt(sizeElement.textContent || '0') : 0;
         
-        // 获取最后修改时间
-        const modifiedElement = response.getElementsByTagName('getlastmodified')[0] || response.getElementsByTagNameNS('DAV:', 'getlastmodified')[0];
+        // 获取最后修改时间 - 尝试多种命名空间
+        let modifiedElement = response.getElementsByTagNameNS('DAV:', 'getlastmodified')[0];
+        if (!modifiedElement) {
+          modifiedElement = response.getElementsByTagName('d:getlastmodified')[0];
+        }
+        if (!modifiedElement) {
+          modifiedElement = response.getElementsByTagName('getlastmodified')[0];
+        }
         const lastModified = modifiedElement ? new Date(modifiedElement.textContent || '') : new Date();
         
-        // 检查是否为目录
-        const resourceTypeElement = response.getElementsByTagName('resourcetype')[0] || response.getElementsByTagNameNS('DAV:', 'resourcetype')[0];
-        const isDirectory = resourceTypeElement ? 
-          (resourceTypeElement.getElementsByTagName('collection').length > 0 || 
-           resourceTypeElement.getElementsByTagNameNS('DAV:', 'collection').length > 0) : false;
+        // 检查是否为目录 - 尝试多种命名空间
+        let resourceTypeElement = response.getElementsByTagNameNS('DAV:', 'resourcetype')[0];
+        if (!resourceTypeElement) {
+          resourceTypeElement = response.getElementsByTagName('d:resourcetype')[0];
+        }
+        if (!resourceTypeElement) {
+          resourceTypeElement = response.getElementsByTagName('resourcetype')[0];
+        }
+        
+        let isDirectory = false;
+        if (resourceTypeElement) {
+          const collectionElements = resourceTypeElement.getElementsByTagNameNS('DAV:', 'collection');
+          const dCollectionElements = resourceTypeElement.getElementsByTagName('d:collection');
+          const plainCollectionElements = resourceTypeElement.getElementsByTagName('collection');
+          isDirectory = collectionElements.length > 0 || dCollectionElements.length > 0 || plainCollectionElements.length > 0;
+        }
         
         files.push({
           name: fileName,
