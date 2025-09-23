@@ -46,6 +46,11 @@ export class FavoritesService {
 
   // 获取所有收藏的论文
   static getFavorites(): FavoritePaper[] {
+    if (typeof window === 'undefined') {
+      // 服务器端渲染时返回空数组
+      return [];
+    }
+    
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
@@ -57,6 +62,11 @@ export class FavoritesService {
 
   // 获取收藏分类
   static getCategories(): FavoriteCategory[] {
+    if (typeof window === 'undefined') {
+      // 服务器端渲染时返回默认分类
+      return DEFAULT_CATEGORIES;
+    }
+    
     try {
       const stored = localStorage.getItem(this.CATEGORIES_KEY);
       return stored ? JSON.parse(stored) : DEFAULT_CATEGORIES;
@@ -68,6 +78,10 @@ export class FavoritesService {
 
   // 保存收藏分类
   static saveCategories(categories: FavoriteCategory[]): void {
+    if (typeof window === 'undefined') {
+      return; // 服务器端不执行
+    }
+    
     try {
       localStorage.setItem(this.CATEGORIES_KEY, JSON.stringify(categories));
     } catch (error) {
@@ -194,6 +208,10 @@ export class FavoritesService {
 
   // 私有方法：保存收藏数据
   private static saveFavorites(favorites: FavoritePaper[]): void {
+    if (typeof window === 'undefined') {
+      return; // 服务器端不执行
+    }
+    
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(favorites));
     } catch (error) {

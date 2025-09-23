@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { Tab } from '@headlessui/react';
 import { UserPreference } from '@/lib/ai';
 import PreferenceForm from './PreferenceForm';
-import { ExclamationCircleIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { ExclamationCircleIcon, CheckCircleIcon, XCircleIcon, ExclamationTriangleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
+import { ConfigService, WebDAVConfig } from '@/lib/config';
 
 interface SettingsProps {
   onSave: (preferences: UserPreference) => void;
@@ -15,7 +16,7 @@ interface SettingsProps {
   onClose: () => void;
 }
 
-export default function Settings({ onSave, initialPreferences, onClose }: SettingsProps) {
+export default function Settings({ onSave, initialPreferences, onClose }: SettingsProps): React.ReactElement {
   const [preferences, setPreferences] = useState<UserPreference>(() => initialPreferences || {
     profession: '',
     interests: [],
@@ -45,15 +46,19 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
   } | null>(null);
 
   // 添加WebDAV配置状态
-  const [webdavConfig, setWebdavConfig] = useState({
-    url: '',
-    username: '',
-    password: ''
-  });
+  const [webdavConfig, setWebdavConfig] = useState<WebDAVConfig>(() => ConfigService.getWebDAVConfig());
 
   // 添加WebDAV测试状态
   const [testingWebdav, setTestingWebdav] = useState(false);
   const [webdavTestResult, setWebdavTestResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: string;
+    isWarning?: boolean;
+  } | null>(null);
+
+  // 添加配置导入导出状态
+  const [importExportResult, setImportExportResult] = useState<{
     success: boolean;
     message: string;
     details?: string;
@@ -68,50 +73,35 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
 
   // WebDAV连通性测试函数
   const testWebdavConnection = async () => {
-    if (!webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
-      setWebdavTestResult({
-        success: false,
-        message: '请填写完整的WebDAV配置信息',
-        details: 'URL、用户名和密码都是必填项'
-      });
-      return;
-    }
-
     setTestingWebdav(true);
     setWebdavTestResult(null);
 
     try {
-      // 创建基本认证头
-      const auth = btoa(`${webdavConfig.username}:${webdavConfig.password}`);
+      // 使用当前界面上的配置进行测试，而不是已保存的配置
+      const { SmartWebDAVClient } = await import('@/lib/webdav-smart');
+      const client = new SmartWebDAVClient(webdavConfig);
+      const result = await client.testConnection();
       
-      // 测试WebDAV连接（使用PROPFIND方法）
-      const response = await fetch(webdavConfig.url, {
-        method: 'PROPFIND',
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Depth': '0',
-          'Content-Type': 'application/xml'
-        },
-        body: '<?xml version="1.0" encoding="utf-8"?><propfind xmlns="DAV:"><prop><displayname/></prop></propfind>'
-      });
-
-      if (response.ok || response.status === 207) { // 207 Multi-Status is also success for WebDAV
+      const connectionType = client.getConnectionType();
+      const modeText = connectionType === 'direct' ? '直连模式' : '服务器代理模式';
+      
+      if (result.success) {
         setWebdavTestResult({
-          success: true,
-          message: 'WebDAV连接测试成功！',
-          details: `服务器响应状态: ${response.status} ${response.statusText}`
+          ...result,
+          message: `✅ 连接测试成功！(${modeText})`,
+          details: result.details || result.message
         });
       } else {
         setWebdavTestResult({
-          success: false,
-          message: 'WebDAV连接失败',
-          details: `服务器响应: ${response.status} ${response.statusText}`
+          ...result,
+          message: `${result.isWarning ? '⚠️' : '❌'} ${result.message} (${modeText})`,
+          details: result.details
         });
       }
     } catch (error) {
       setWebdavTestResult({
         success: false,
-        message: 'WebDAV连接测试失败',
+        message: '连接测试失败',
         details: error instanceof Error ? error.message : '未知错误'
       });
     } finally {
@@ -121,14 +111,14 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
 
   useEffect(() => {
     try {
-      const savedPreferences = localStorage.getItem('user_preferences');
-      if (savedPreferences) {
-        const parsedPreferences = JSON.parse(savedPreferences);
-        setPreferences(prev => ({
-          ...prev,
-          ...parsedPreferences
-        }));
-      }
+      const savedPreferences = ConfigService.getUserPreferences();
+      setPreferences(prev => ({
+        ...prev,
+        ...savedPreferences
+      }));
+      
+      const savedWebdavConfig = ConfigService.getWebDAVConfig();
+      setWebdavConfig(savedWebdavConfig);
     } catch (error) {
       console.error('Error loading preferences from localStorage:', error);
     }
@@ -150,7 +140,8 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
     }
     
     try {
-      localStorage.setItem('user_preferences', JSON.stringify(preferences));
+      ConfigService.saveUserPreferences(preferences);
+      ConfigService.saveWebDAVConfig(webdavConfig);
       onSave(preferences);
       onClose();
     } catch (error) {
@@ -226,6 +217,17 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                       }
                     >
                       网络设置
+                    </Tab>
+                    <Tab
+                      className={({ selected }) =>
+                        `w-full rounded-lg py-2.5 text-sm font-medium leading-5 text-blue-700 dark:text-blue-200
+                        ${selected
+                          ? 'bg-white dark:bg-gray-700 shadow'
+                          : 'text-blue-100 hover:bg-white/[0.12] hover:text-blue-600 dark:hover:text-blue-100'
+                        }`
+                      }
+                    >
+                      数据管理
                     </Tab>
                   </Tab.List>
                   <Tab.Panels>
@@ -470,6 +472,8 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                         <div>
                           <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">WebDAV配置</h4>
                           
+
+                          
                           <div className="space-y-4">
                             {/* WebDAV URL */}
                             <div>
@@ -481,7 +485,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                 id="webdavUrl"
                                 value={webdavConfig.url}
                                 onChange={(e) => setWebdavConfig(prev => ({ ...prev, url: e.target.value }))}
-                                placeholder="https://your-webdav-server.com/dav/"
+                                placeholder="https://dav.jianguoyun.com/dav/ (坚果云) 或其他WebDAV服务器"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                               />
                             </div>
@@ -496,7 +500,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                 id="webdavUsername"
                                 value={webdavConfig.username}
                                 onChange={(e) => setWebdavConfig(prev => ({ ...prev, username: e.target.value }))}
-                                placeholder="输入WebDAV用户名"
+                                placeholder="坚果云：邮箱地址 | 其他服务：用户名"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                               />
                             </div>
@@ -511,12 +515,36 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                 id="webdavPassword"
                                 value={webdavConfig.password}
                                 onChange={(e) => setWebdavConfig(prev => ({ ...prev, password: e.target.value }))}
-                                placeholder="输入WebDAV密码"
+                                placeholder="坚果云：应用密码 | 其他服务：登录密码"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                               />
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                坚果云用户请在网页版&ldquo;账户信息-安全选项&rdquo;中生成应用密码，不能使用登录密码
+                              </p>
                             </div>
 
-                            {/* 测试连接按钮 */}
+                            {/* 使用服务器代理选项 */}
+                            <div>
+                              <div className="flex items-center">
+                                <input
+                                  id="useProxy"
+                                  type="checkbox"
+                                  checked={webdavConfig.useProxy !== false}
+                                  onChange={(e) => setWebdavConfig(prev => ({ ...prev, useProxy: e.target.checked }))}
+                                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                                />
+                                <label htmlFor="useProxy" className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                  使用服务器代理
+                                </label>
+                              </div>
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {webdavConfig.useProxy !== false 
+                                  ? '✅ 通过服务器代理连接WebDAV，可解决CORS跨域问题（推荐）' 
+                                  : '⚠️ 直连WebDAV服务器，性能更好但可能遇到CORS限制'}
+                              </p>
+                            </div>
+
+                            {/* 测试连接和智能检测按钮 */}
                             <div className="flex items-center space-x-3">
                               <button
                                 type="button"
@@ -530,6 +558,83 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                               >
                                 {testingWebdav ? '测试中...' : '测试连接'}
                               </button>
+                              
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
+                                    setWebdavTestResult({
+                                      success: false,
+                                      message: '请填写完整的WebDAV配置信息'
+                                    });
+                                    return;
+                                  }
+
+                                  setTestingWebdav(true);
+                                  setWebdavTestResult({
+                                    success: false,
+                                    message: '正在智能检测最佳连接方式...'
+                                  });
+
+                                  try {
+                                    // 导入SmartWebDAVClient
+                                    const { SmartWebDAVClient } = await import('@/lib/webdav-smart');
+                                    const client = new SmartWebDAVClient(webdavConfig);
+                                    const result = await client.detectBestConnectionMode();
+                                    
+                                    let resultMessage = `🔍 智能检测完成
+
+`;
+                                    
+                                    if (result.directResult) {
+                                      const directIcon = result.directResult.success ? '✅' : '❌';
+                                      resultMessage += `${directIcon} 直连模式: ${result.directResult.success ? '成功' : '失败'}
+`;
+                                    }
+                                    
+                                    if (result.proxyResult) {
+                                      const proxyIcon = result.proxyResult.success ? '✅' : '❌';
+                                      resultMessage += `${proxyIcon} 代理模式: ${result.proxyResult.success ? '成功' : '失败'}
+
+`;
+                                    }
+                                    
+                                    resultMessage += `💡 推荐: ${result.recommendation}`;
+                                    
+                                    // 如果推荐的模式与当前设置不同，自动应用推荐设置
+                                    if (result.success && result.recommendedMode !== (webdavConfig.useProxy ? 'proxy' : 'direct')) {
+                                      const shouldUseProxy = result.recommendedMode === 'proxy';
+                                      setWebdavConfig(prev => ({ ...prev, useProxy: shouldUseProxy }));
+                                      resultMessage += `
+
+✅ 已自动切换到${result.recommendedMode === 'direct' ? '直连' : '代理'}模式`;
+                                    }
+                                    
+                                    setWebdavTestResult({
+                                      success: result.success,
+                                      message: result.success ? '智能检测成功' : '智能检测完成',
+                                      details: resultMessage,
+                                      isWarning: !result.success
+                                    });
+                                  } catch (error) {
+                                    setWebdavTestResult({
+                                      success: false,
+                                      message: '智能检测失败',
+                                      details: error instanceof Error ? error.message : '未知错误'
+                                    });
+                                  } finally {
+                                    setTestingWebdav(false);
+                                  }
+                                }}
+                                disabled={testingWebdav || !webdavConfig.url || !webdavConfig.username || !webdavConfig.password}
+                                className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-900 ${
+                                  testingWebdav || !webdavConfig.url || !webdavConfig.username || !webdavConfig.password
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400'
+                                    : 'bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600'
+                                }`}
+                              >
+                                {testingWebdav ? '检测中...' : '智能检测'}
+                              </button>
                             </div>
 
                             {/* 测试结果显示 */}
@@ -537,12 +642,16 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                               <div className={`p-4 rounded-md ${
                                 webdavTestResult.success 
                                   ? 'bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800' 
-                                  : 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                                  : webdavTestResult.isWarning
+                                    ? 'bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                                    : 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
                               }`}>
                                 <div className="flex items-start">
                                   <div className="flex-shrink-0">
                                     {webdavTestResult.success ? (
                                       <CheckCircleIcon className="h-5 w-5 text-green-400" aria-hidden="true" />
+                                    ) : webdavTestResult.isWarning ? (
+                                      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" aria-hidden="true" />
                                     ) : (
                                       <XCircleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
                                     )}
@@ -551,15 +660,19 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                     <h3 className={`text-sm font-medium ${
                                       webdavTestResult.success 
                                         ? 'text-green-800 dark:text-green-200' 
-                                        : 'text-red-800 dark:text-red-200'
+                                        : webdavTestResult.isWarning
+                                          ? 'text-yellow-800 dark:text-yellow-200'
+                                          : 'text-red-800 dark:text-red-200'
                                     }`}>
                                       {webdavTestResult.message}
                                     </h3>
                                     {webdavTestResult.details && (
-                                      <div className={`mt-2 text-sm ${
+                                      <div className={`mt-2 text-sm whitespace-pre-line ${
                                         webdavTestResult.success 
                                           ? 'text-green-700 dark:text-green-300' 
-                                          : 'text-red-700 dark:text-red-300'
+                                          : webdavTestResult.isWarning
+                                            ? 'text-yellow-700 dark:text-yellow-300'
+                                            : 'text-red-700 dark:text-red-300'
                                       }`}>
                                         {webdavTestResult.details}
                                       </div>
@@ -569,9 +682,316 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                               </div>
                             )}
 
+
+
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                               WebDAV用于同步和备份论文收藏数据。支持大多数WebDAV服务，如Nextcloud、ownCloud等。
                             </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Tab.Panel>
+                    <Tab.Panel>
+                      <div className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-lg shadow">
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">配置导入导出</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                            导出您的所有配置数据（包括研究偏好、LLM设置、网络设置、收藏分类和收藏论文）到文件，或从备份文件恢复配置。
+                          </p>
+                          
+                          {/* 配置统计信息 */}
+                          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">当前配置概览</h5>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400">研究偏好:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">
+                                  {typeof window !== 'undefined' && ConfigService.getConfigStats().hasPreferences ? '已配置' : '未配置'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400">WebDAV:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">
+                                  {typeof window !== 'undefined' && ConfigService.getConfigStats().hasWebDAVConfig ? '已配置' : '未配置'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400">收藏分类:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">
+                                  {typeof window !== 'undefined' ? ConfigService.getConfigStats().favoriteCategoriesCount : 0} 个
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400">收藏论文:</span>
+                                <span className="ml-2 text-gray-900 dark:text-gray-100">
+                                  {typeof window !== 'undefined' ? ConfigService.getConfigStats().favoritePapersCount : 0} 篇
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 导入导出按钮 */}
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            {/* 导出配置 */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                try {
+                                  const configData = ConfigService.exportConfig();
+                                  const blob = new Blob([configData], { type: 'application/json' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `paper-config-${new Date().toISOString().split('T')[0]}.json`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+                                  
+                                  setImportExportResult({
+                                    success: true,
+                                    message: '配置导出成功',
+                                    details: '配置文件已下载到您的设备'
+                                  });
+                                } catch (error) {
+                                  setImportExportResult({
+                                    success: false,
+                                    message: '配置导出失败',
+                                    details: error instanceof Error ? error.message : '未知错误'
+                                  });
+                                }
+                              }}
+                              className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
+                            >
+                              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                              导出配置
+                            </button>
+
+                            {/* 导入配置 */}
+                            <label className="flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-gray-600 dark:focus:ring-offset-gray-900 cursor-pointer">
+                              <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
+                              导入配置
+                              <input
+                                type="file"
+                                accept=".json"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      try {
+                                        const data = event.target?.result as string;
+                                        const result = ConfigService.importConfig(data);
+                                        setImportExportResult(result);
+                                        
+                                        if (result.success) {
+                                          // 重新加载配置
+                                          const newPreferences = ConfigService.getUserPreferences();
+                                          const newWebdavConfig = ConfigService.getWebDAVConfig();
+                                          setPreferences(newPreferences);
+                                          setWebdavConfig(newWebdavConfig);
+                                        }
+                                      } catch (error) {
+                                        setImportExportResult({
+                                          success: false,
+                                          message: '文件读取失败',
+                                          details: error instanceof Error ? error.message : '未知错误'
+                                        });
+                                      }
+                                    };
+                                    reader.readAsText(file);
+                                  }
+                                  // 清空input值，允许重复选择同一文件
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+
+                            {/* 重置配置 */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm('确定要重置所有配置吗？这将清除所有设置、收藏数据等，此操作不可恢复！')) {
+                                  try {
+                                    ConfigService.resetAllConfig();
+                                    
+                                    // 重置界面状态
+                                    const defaultPreferences: UserPreference = {
+                                      profession: '',
+                                      interests: [],
+                                      nonInterests: [],
+                                      apiConfig: {
+                                        apiKey: '',
+                                        apiBaseUrl: '',
+                                        model: '',
+                                        maxConcurrentRequests: 3
+                                      },
+                                      arxivProxyUrl: ''
+                                    };
+                                    const defaultWebdavConfig: WebDAVConfig = {
+                                      url: '',
+                                      username: '',
+                                      password: ''
+                                    };
+                                    
+                                    setPreferences(defaultPreferences);
+                                    setWebdavConfig(defaultWebdavConfig);
+                                    
+                                    setImportExportResult({
+                                      success: true,
+                                      message: '配置重置成功',
+                                      details: '所有配置已重置为默认值'
+                                    });
+                                  } catch (error) {
+                                    setImportExportResult({
+                                      success: false,
+                                      message: '配置重置失败',
+                                      details: error instanceof Error ? error.message : '未知错误'
+                                    });
+                                  }
+                                }
+                              }}
+                              className="flex items-center justify-center px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-600 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-700 dark:text-red-400 dark:border-red-400 dark:hover:bg-gray-600 dark:focus:ring-offset-gray-900"
+                            >
+                              <TrashIcon className="h-4 w-4 mr-2" />
+                              重置配置
+                            </button>
+                          </div>
+
+                          {/* 导入导出结果显示 */}
+                          {importExportResult && (
+                            <div className={`mt-4 p-4 rounded-md ${
+                              importExportResult.success 
+                                ? 'bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                                : 'bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                            }`}>
+                              <div className="flex items-start">
+                                <div className="flex-shrink-0">
+                                  {importExportResult.success ? (
+                                    <CheckCircleIcon className="h-5 w-5 text-green-400" aria-hidden="true" />
+                                  ) : (
+                                    <XCircleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
+                                  )}
+                                </div>
+                                <div className="ml-3">
+                                  <h3 className={`text-sm font-medium ${
+                                    importExportResult.success 
+                                      ? 'text-green-800 dark:text-green-200' 
+                                      : 'text-red-800 dark:text-red-200'
+                                  }`}>
+                                    {importExportResult.message}
+                                  </h3>
+                                  {importExportResult.details && (
+                                    <div className={`mt-2 text-sm ${
+                                      importExportResult.success 
+                                        ? 'text-green-700 dark:text-green-300' 
+                                        : 'text-red-700 dark:text-red-300'
+                                    }`}>
+                                      {importExportResult.details}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 分隔线 */}
+                          <div className="border-t border-gray-200 dark:border-gray-600 my-6"></div>
+
+                          {/* WebDAV云端同步功能 */}
+                          <div>
+                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">WebDAV云端同步</h5>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                              将配置同步到WebDAV服务器，实现跨设备数据同步。需要先在"网络设置"中配置WebDAV服务器信息。
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const webdavConfig = ConfigService.getWebDAVConfig();
+                                  if (!webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
+                                    setImportExportResult({
+                                      success: false,
+                                      message: 'WebDAV配置不完整',
+                                      details: '请先在"网络设置"标签页中配置WebDAV服务器信息'
+                                    });
+                                    return;
+                                  }
+
+                                  try {
+                                    setImportExportResult(null);
+                                    const result = await ConfigService.syncToWebDAV();
+                                    setImportExportResult(result);
+                                  } catch (error) {
+                                    setImportExportResult({
+                                      success: false,
+                                      message: '同步到云端失败',
+                                      details: error instanceof Error ? error.message : '未知错误'
+                                    });
+                                  }
+                                }}
+                                disabled={!webdavConfig.url}
+                                className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 ${
+                                  webdavConfig.url
+                                    ? 'text-white bg-blue-600 border border-transparent hover:bg-blue-700'
+                                    : 'text-gray-400 bg-gray-100 border border-gray-300 cursor-not-allowed dark:bg-gray-600 dark:text-gray-500 dark:border-gray-500'
+                                }`}
+                              >
+                                同步到云端
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const webdavConfig = ConfigService.getWebDAVConfig();
+                                  if (!webdavConfig.url || !webdavConfig.username || !webdavConfig.password) {
+                                    setImportExportResult({
+                                      success: false,
+                                      message: 'WebDAV配置不完整',
+                                      details: '请先在"网络设置"标签页中配置WebDAV服务器信息'
+                                    });
+                                    return;
+                                  }
+
+                                  try {
+                                    setImportExportResult(null);
+                                    const result = await ConfigService.restoreFromWebDAV();
+                                    setImportExportResult(result);
+                                    
+                                    if (result.success) {
+                                      // 重新加载配置
+                                      const newPreferences = ConfigService.getUserPreferences();
+                                      const newWebdavConfig = ConfigService.getWebDAVConfig();
+                                      setPreferences(newPreferences);
+                                      setWebdavConfig(newWebdavConfig);
+                                    }
+                                  } catch (error) {
+                                    setImportExportResult({
+                                      success: false,
+                                      message: '从云端恢复失败',
+                                      details: error instanceof Error ? error.message : '未知错误'
+                                    });
+                                  }
+                                }}
+                                disabled={!webdavConfig.url}
+                                className={`px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-900 ${
+                                  webdavConfig.url
+                                    ? 'text-green-600 bg-white border border-green-600 hover:bg-green-50 dark:bg-gray-700 dark:text-green-400 dark:border-green-400 dark:hover:bg-gray-600'
+                                    : 'text-gray-400 bg-gray-100 border border-gray-300 cursor-not-allowed dark:bg-gray-600 dark:text-gray-500 dark:border-gray-500'
+                                }`}
+                              >
+                                从云端恢复
+                              </button>
+                            </div>
+                            
+                            {/* WebDAV同步状态提示 */}
+                            {!webdavConfig.url && (
+                              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md dark:bg-yellow-900/20 dark:border-yellow-800">
+                                <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                                  💡 提示：请先在"网络设置"标签页中配置WebDAV服务器信息，然后即可使用云端同步功能。
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
