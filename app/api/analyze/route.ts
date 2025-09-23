@@ -100,26 +100,53 @@ export async function POST(request: Request) {
     }`;
 
     console.log('[AI] 正在调用OpenAI API...');
-    const apiUrl = `${API_BASE_URL}/chat/completions`;
-    const response = await axios.post(apiUrl, {
-      model: API_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a professional academic paper analysis assistant, adept at assessing the relevance of papers based on the user backgrounds'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json'
+    
+    let response;
+    const messages = [
+      {
+        role: 'system',
+        content: 'You are a professional academic paper analysis assistant, adept at assessing the relevance of papers based on the user backgrounds'
+      },
+      {
+        role: 'user',
+        content: prompt
       }
-    });
+    ];
+
+    // 根据用户配置选择直连或代理模式
+    if (preference.apiConfig?.useProxy === true) {
+      console.log('[AI] 使用服务器代理模式');
+      // 使用内部代理API - 构建完整URL
+      const baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
+      
+      response = await axios.post(`${baseUrl}/api/llm-proxy`, {
+        apiKey: API_KEY,
+        apiBaseUrl: API_BASE_URL,
+        model: API_MODEL,
+        messages,
+        temperature: 0.7
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    } else {
+      console.log('[AI] 使用直连模式');
+      // 直接调用LLM API
+      const apiUrl = `${API_BASE_URL}/chat/completions`;
+      response = await axios.post(apiUrl, {
+        model: API_MODEL,
+        messages,
+        temperature: 0.7
+      }, {
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
 
     // console.log(`[AI] 请求返回内容：${response.data.choices[0].message.content.replace(/[\r\n]+/g, '').replace(/\\/g, '\\\\')}`);
     const result = JSON.parse(response.data.choices[0].message.content.replace(/[\r\n]+/g, '').replace(/\\/g, '\\\\')) as PaperAnalysis;

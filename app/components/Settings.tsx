@@ -25,7 +25,8 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
       apiKey: '',
       apiBaseUrl: '',
       model: '',
-      maxConcurrentRequests: 3
+      maxConcurrentRequests: 3,
+      useProxy: false // 默认不使用代理（直连）
     },
     arxivProxyUrl: '' // 新增：ArXiv代理URL配置
   });
@@ -375,6 +376,33 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                             required
                           />
                         </div>
+
+                        {/* 使用服务器代理选项 */}
+                        <div>
+                          <div className="flex items-center">
+                            <input
+                              id="llmUseProxy"
+                              type="checkbox"
+                              checked={preferences.apiConfig?.useProxy === true}
+                              onChange={(e) => setPreferences(prev => ({
+                                ...prev,
+                                apiConfig: {
+                                  ...prev.apiConfig!,
+                                  useProxy: e.target.checked
+                                }
+                              } as UserPreference))}
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                            />
+                            <label htmlFor="llmUseProxy" className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                              使用服务器代理
+                            </label>
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {preferences.apiConfig?.useProxy === true
+                              ? '✅ 通过服务器代理连接LLM服务，可解决CORS跨域问题和网络限制' 
+                              : '⚠️ 直连LLM服务器，性能更好但可能遇到网络限制或CORS问题'}
+                          </p>
+                        </div>
                         
                         {/* API测试按钮 */}
                         <div className="mt-6">
@@ -388,16 +416,43 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                               setTestResult(null);
                               
                               try {
-                                const response = await axios.post('/api/test', {
-                                  apiKey: preferences.apiConfig?.apiKey,
-                                  apiBaseUrl: preferences.apiConfig?.apiBaseUrl,
-                                  model: preferences.apiConfig?.model
-                                });
-                                
-                                setTestResult({
-                                  success: response.data.success,
-                                  message: response.data.message
-                                });
+                                if (preferences.apiConfig?.useProxy === true) {
+                                  // 代理模式：通过服务器API测试
+                                  const response = await axios.post('/api/test', {
+                                    apiKey: preferences.apiConfig?.apiKey,
+                                    apiBaseUrl: preferences.apiConfig?.apiBaseUrl,
+                                    model: preferences.apiConfig?.model,
+                                    useProxy: preferences.apiConfig?.useProxy
+                                  });
+                                  
+                                  setTestResult({
+                                    success: response.data.success,
+                                    message: response.data.message
+                                  });
+                                } else {
+                                  // 直连模式：前端直接测试
+                                  const apiUrl = `${preferences.apiConfig?.apiBaseUrl}/chat/completions`;
+                                  await axios.post(apiUrl, {
+                                    model: preferences.apiConfig?.model,
+                                    messages: [
+                                      {
+                                        role: 'user',
+                                        content: 'hi'
+                                      }
+                                    ],
+                                    temperature: 0.7
+                                  }, {
+                                    headers: {
+                                      'Authorization': `Bearer ${preferences.apiConfig?.apiKey}`,
+                                      'Content-Type': 'application/json'
+                                    }
+                                  });
+                                  
+                                  setTestResult({
+                                    success: true,
+                                    message: 'API连接测试成功（直连模式）'
+                                  });
+                                }
                               } catch (error) {
                                 // 将错误转换为AxiosError类型
                                 const axiosError = error as import('axios').AxiosError<{
@@ -405,9 +460,35 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                   details?: string;
                                   error?: string;
                                 }>;
-                                // 获取详细的错误信息
-                                const errorMessage = axiosError.response?.data?.message || '测试失败，请检查API配置';
-                                const errorDetails = axiosError.response?.data?.details || axiosError.response?.data?.error || '';
+                                
+                                let errorMessage = '测试失败，请检查API配置';
+                                let errorDetails = '';
+                                
+                                if (preferences.apiConfig?.useProxy !== true) {
+                                  // 直连模式的错误处理
+                                  if (axiosError.response) {
+                                    errorMessage = `API返回错误: ${axiosError.response.status} ${axiosError.response.statusText}`;
+                                    if (axiosError.response.data?.error) {
+                                      const errorData = axiosError.response.data.error;
+                                      if (typeof errorData === 'string') {
+                                        errorDetails = errorData;
+                                      } else if (typeof errorData === 'object' && errorData !== null && 'message' in errorData) {
+                                        errorDetails = (errorData as { message: string }).message;
+                                      } else {
+                                        errorDetails = JSON.stringify(errorData);
+                                      }
+                                    }
+                                  } else if (axiosError.request) {
+                                    errorMessage = '无法连接到API服务器';
+                                    errorDetails = '请检查API基础URL和网络连接，或尝试启用服务器代理模式';
+                                  } else {
+                                    errorMessage = axiosError.message || '未知错误';
+                                  }
+                                } else {
+                                  // 代理模式的错误处理
+                                  errorMessage = axiosError.response?.data?.message || '测试失败，请检查API配置';
+                                  errorDetails = axiosError.response?.data?.details || axiosError.response?.data?.error || '';
+                                }
                                 
                                 setTestResult({
                                   success: false,

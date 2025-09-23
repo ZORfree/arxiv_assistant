@@ -83,7 +83,8 @@ export class ConfigService {
           apiKey: '',
           apiBaseUrl: '',
           model: '',
-          maxConcurrentRequests: 3
+          maxConcurrentRequests: 3,
+          useProxy: false // 默认不使用代理（直连）
         },
         arxivProxyUrl: ''
       };
@@ -91,7 +92,7 @@ export class ConfigService {
     
     try {
       const stored = localStorage.getItem(this.USER_PREFERENCES_KEY);
-      return stored ? JSON.parse(stored) : {
+      const preferences = stored ? JSON.parse(stored) : {
         profession: '',
         interests: [],
         nonInterests: [],
@@ -99,10 +100,18 @@ export class ConfigService {
           apiKey: '',
           apiBaseUrl: '',
           model: '',
-          maxConcurrentRequests: 3
+          maxConcurrentRequests: 3,
+          useProxy: false // 默认不使用代理（直连）
         },
         arxivProxyUrl: ''
       };
+      
+      // 确保useProxy字段存在，如果不存在则设为默认值false
+      if (preferences.apiConfig && preferences.apiConfig.useProxy === undefined) {
+        preferences.apiConfig.useProxy = false;
+      }
+      
+      return preferences;
     } catch (error) {
       console.error('Error loading user preferences:', error);
       return {
@@ -113,7 +122,8 @@ export class ConfigService {
           apiKey: '',
           apiBaseUrl: '',
           model: '',
-          maxConcurrentRequests: 3
+          maxConcurrentRequests: 3,
+          useProxy: false // 默认不使用代理（直连）
         },
         arxivProxyUrl: ''
       };

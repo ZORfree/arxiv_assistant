@@ -11,7 +11,7 @@ interface ErrorResponse {
 export async function POST(request: Request) {
   try {
     // 获取请求参数
-    const { apiKey, apiBaseUrl, model } = await request.json();
+    const { apiKey, apiBaseUrl, model, useProxy } = await request.json();
 
     // 验证参数
     if (!apiKey) {
@@ -24,26 +24,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: '模型名称不能为空' }, { status: 400 });
     }
 
-    // 构建简单的测试请求
-    const apiUrl = `${apiBaseUrl}/chat/completions`;
-    await axios.post(apiUrl, {
-      model: model,
-      messages: [
-        {
-          role: 'user',
-          content: 'hi'
-        }
-      ],
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+    const testMessages = [
+      {
+        role: 'user',
+        content: 'hi'
       }
-    });
+    ];
 
-    // 如果请求成功，返回成功信息
-    return NextResponse.json({ success: true, message: 'API连接测试成功' });
+    // 根据用户配置选择直连或代理模式
+    if (useProxy === true) {
+      console.log('[API Test] 使用服务器代理模式测试');
+      // 使用内部代理API - 构建完整URL
+      const baseUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
+      
+      await axios.post(`${baseUrl}/api/llm-proxy`, {
+        apiKey,
+        apiBaseUrl,
+        model,
+        messages: testMessages,
+        temperature: 0.7
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // 如果请求成功，返回成功信息
+      return NextResponse.json({ 
+        success: true, 
+        message: 'API连接测试成功（服务器代理模式）' 
+      });
+    } else {
+      console.log('[API Test] 使用直连模式测试');
+      // 直接调用LLM API
+      const apiUrl = `${apiBaseUrl}/chat/completions`;
+      await axios.post(apiUrl, {
+        model: model,
+        messages: testMessages,
+        temperature: 0.7
+      }, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // 如果请求成功，返回成功信息
+      return NextResponse.json({ 
+        success: true, 
+        message: 'API连接测试成功（直连模式）' 
+      });
+    }
   } catch (error) {
     // 将错误转换为AxiosError类型
     const axiosError = error as AxiosError<ErrorResponse>;
