@@ -100,7 +100,7 @@ export default function TestWebDAV() {
       const client = new SmartWebDAVClient(config);
       const detectResult = await client.detectBestConnectionMode();
       
-      let displayResult = {
+      const displayResult = {
         ...detectResult,
         currentMode: config.useProxy !== false ? 'proxy' : 'direct',
         currentModeText: config.useProxy !== false ? '服务器代理模式' : '直连模式'

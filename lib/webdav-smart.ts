@@ -113,7 +113,13 @@ export class SmartWebDAVClient {
     proxyResult?: { success: boolean; message: string; details?: string };
     recommendation: string;
   }> {
-    const results: any = {
+    const results: {
+      success: boolean;
+      recommendedMode: 'direct' | 'proxy';
+      directResult?: { success: boolean; message: string; details?: string };
+      proxyResult?: { success: boolean; message: string; details?: string };
+      recommendation: string;
+    } = {
       success: false,
       recommendedMode: 'proxy' as const,
       recommendation: ''

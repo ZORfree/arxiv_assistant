@@ -162,7 +162,7 @@ export class ConfigService {
         };
       }
 
-      let importedItems: string[] = [];
+      const importedItems: string[] = [];
 
       // 导入用户偏好设置
       if (config.preferences) {

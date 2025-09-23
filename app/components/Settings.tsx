@@ -903,7 +903,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                           <div>
                             <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">WebDAV云端同步</h5>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                              将配置同步到WebDAV服务器，实现跨设备数据同步。需要先在"网络设置"中配置WebDAV服务器信息。
+                              将配置同步到WebDAV服务器，实现跨设备数据同步。需要先在&ldquo;网络设置&rdquo;中配置WebDAV服务器信息。
                             </p>
                             <div className="flex flex-col sm:flex-row gap-3">
                               <button
@@ -914,7 +914,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                     setImportExportResult({
                                       success: false,
                                       message: 'WebDAV配置不完整',
-                                      details: '请先在"网络设置"标签页中配置WebDAV服务器信息'
+                                      details: '请先在&ldquo;网络设置&rdquo;标签页中配置WebDAV服务器信息'
                                     });
                                     return;
                                   }
@@ -988,7 +988,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                             {!webdavConfig.url && (
                               <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md dark:bg-yellow-900/20 dark:border-yellow-800">
                                 <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                                  💡 提示：请先在"网络设置"标签页中配置WebDAV服务器信息，然后即可使用云端同步功能。
+                                  💡 提示：请先在&ldquo;网络设置&rdquo;标签页中配置WebDAV服务器信息，然后即可使用云端同步功能。
                                 </p>
                               </div>
                             )}
