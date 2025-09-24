@@ -176,11 +176,15 @@ export default function SearchForm({ onSearch, loading, showRelevantOnly, onShow
                 checked={showRelevantOnly}
                 onChange={(e) => onShowRelevantOnlyChange(e.target.checked)}
               />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-200">仅显示相关论文</span>
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-200">
+                <span className="hidden sm:inline">仅显示相关论文</span>
+                <span className="sm:hidden">仅相关</span>
+              </span>
             </label>
             {totalPapers !== undefined && (
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                共找到 {totalPapers} 篇论文
+                <span className="hidden sm:inline">共找到 {totalPapers} 篇论文</span>
+                <span className="sm:hidden">找到{totalPapers}篇</span>
               </span>
             )}
           </div>
@@ -198,7 +202,12 @@ export default function SearchForm({ onSearch, loading, showRelevantOnly, onShow
             disabled={loading}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '搜索中...' : '开始搜索'}
+            {loading ? '搜索中...' : (
+              <>
+                <span className="hidden sm:inline">开始搜索</span>
+                <span className="sm:hidden">搜索</span>
+              </>
+            )}
           </button>
         </div>
       </form>
