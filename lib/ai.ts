@@ -1,4 +1,5 @@
 import { UserService } from "./user";
+import { ProxyStatusService } from "./proxy-status";
 
 export interface UserPreference {
   profession: string;
@@ -50,8 +51,25 @@ export class AIService {
         throw new Error('API configuration not found in user preferences');
       }
 
-      // 根据用户配置选择直连或代理模式
-      if (userpreference.apiConfig.useProxy === true) {
+      // 检查代理服务状态，决定使用代理还是直连模式
+      const shouldUseProxy = userpreference.apiConfig.useProxy === true;
+      let actualUseProxy = shouldUseProxy;
+      
+      if (shouldUseProxy) {
+        // 如果用户配置要使用代理，检查代理服务是否可用
+        try {
+          const isProxyAvailable = await ProxyStatusService.isLLMProxyAvailable();
+          if (!isProxyAvailable) {
+            console.warn('[AI] 用户配置使用代理模式，但代理服务不可用，自动切换到直连模式');
+            actualUseProxy = false;
+          }
+        } catch (error) {
+          console.warn('[AI] 无法检查代理状态，切换到直连模式:', error);
+          actualUseProxy = false;
+        }
+      }
+      
+      if (actualUseProxy) {
         console.log('[AI] 使用服务器代理模式');
         // 代理模式：通过服务器API
         const response = await fetch('/api/analyze', {

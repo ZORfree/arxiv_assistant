@@ -9,6 +9,8 @@ import PreferenceForm from './PreferenceForm';
 import { ExclamationCircleIcon, CheckCircleIcon, XCircleIcon, ExclamationTriangleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { ConfigService, WebDAVConfig } from '@/lib/config';
+import { ProxyStatusService, ProxyStatus } from '@/lib/proxy-status';
+import ProxyStatusIndicator, { ProxyWarning } from './ProxyStatusIndicator';
 
 interface SettingsProps {
   onSave: (preferences: UserPreference) => void;
@@ -67,6 +69,10 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
   
   // 添加WebDAV恢复状态
   const [restoringFromWebDAV, setRestoringFromWebDAV] = useState(false);
+
+  // 添加代理状态
+  const [proxyStatus, setProxyStatus] = useState<ProxyStatus | null>(null);
+  const [proxyStatusLoading, setProxyStatusLoading] = useState(true);
   
   // 检查API配置是否有效
   const isApiConfigValid = () => {
@@ -123,6 +129,62 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
       
       const savedWebdavConfig = ConfigService.getWebDAVConfig();
       setWebdavConfig(savedWebdavConfig);
+      
+      // 获取代理状态
+      const fetchProxyStatus = async () => {
+        try {
+          setProxyStatusLoading(true);
+          const status = await ProxyStatusService.getProxyStatus();
+          setProxyStatus(status);
+          
+          // 如果代理服务被禁用，自动更新配置为直连模式
+          let needUpdatePreferences = false;
+          let needUpdateWebdav = false;
+          
+          // 检查LLM代理状态
+          if (!status.llm.enabled && savedPreferences.apiConfig?.useProxy === true) {
+            setPreferences(prev => ({
+              ...prev,
+              apiConfig: {
+                ...prev.apiConfig!,
+                useProxy: false
+              }
+            } as UserPreference));
+            needUpdatePreferences = true;
+          }
+          
+          // 检查WebDAV代理状态
+          if (!status.webdav.enabled && savedWebdavConfig.useProxy !== false) {
+            setWebdavConfig(prev => ({ ...prev, useProxy: false }));
+            needUpdateWebdav = true;
+          }
+          
+          // 如果有配置更新，立即保存到本地存储
+          if (needUpdatePreferences || needUpdateWebdav) {
+            if (needUpdatePreferences) {
+              const updatedPreferences = {
+                ...savedPreferences,
+                apiConfig: {
+                  ...savedPreferences.apiConfig!,
+                  useProxy: false
+                }
+              };
+              ConfigService.saveUserPreferences(updatedPreferences);
+            }
+            if (needUpdateWebdav) {
+              const updatedWebdavConfig = { ...savedWebdavConfig, useProxy: false };
+              ConfigService.saveWebDAVConfig(updatedWebdavConfig);
+            }
+          }
+          
+        } catch (error) {
+          console.error('获取代理状态失败:', error);
+        } finally {
+          setProxyStatusLoading(false);
+        }
+      };
+      
+      fetchProxyStatus();
     } catch (error) {
       console.error('Error loading preferences from localStorage:', error);
     }
@@ -383,7 +445,8 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                             <input
                               id="llmUseProxy"
                               type="checkbox"
-                              checked={preferences.apiConfig?.useProxy === true}
+                              checked={!proxyStatusLoading && proxyStatus && !proxyStatus.llm.enabled ? false : preferences.apiConfig?.useProxy === true}
+                              disabled={!proxyStatusLoading && proxyStatus ? !proxyStatus.llm.enabled : false}
                               onChange={(e) => setPreferences(prev => ({
                                 ...prev,
                                 apiConfig: {
@@ -391,17 +454,38 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                   useProxy: e.target.checked
                                 }
                               } as UserPreference))}
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                              className={`h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700 ${
+                                !proxyStatusLoading && proxyStatus && !proxyStatus.llm.enabled 
+                                  ? 'opacity-50 cursor-not-allowed' 
+                                  : ''
+                              }`}
                             />
-                            <label htmlFor="llmUseProxy" className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                            <label htmlFor="llmUseProxy" className={`ml-2 block text-sm font-medium text-gray-700 dark:text-gray-200 ${
+                              !proxyStatusLoading && proxyStatus && !proxyStatus.llm.enabled 
+                                ? 'opacity-50' 
+                                : ''
+                            }`}>
                               使用服务器代理
                             </label>
                           </div>
+                          
+                          {/* 代理状态指示器 */}
+                          <div className="mt-2">
+                            <ProxyStatusIndicator type="llm" />
+                          </div>
+                          
                           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             {preferences.apiConfig?.useProxy === true
                               ? '✅ 通过服务器代理连接LLM服务，可解决CORS跨域问题和网络限制' 
                               : '⚠️ 直连LLM服务器，性能更好但可能遇到网络限制或CORS问题'}
                           </p>
+                          
+                          {/* 代理不可用警告 */}
+                          <ProxyWarning 
+                            type="llm" 
+                            show={!proxyStatusLoading && proxyStatus !== null && !proxyStatus.llm.enabled && preferences.apiConfig?.useProxy === true}
+                            className="mt-2"
+                          />
                         </div>
                         
                         {/* API测试按钮 */}
@@ -613,19 +697,41 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                 <input
                                   id="useProxy"
                                   type="checkbox"
-                                  checked={webdavConfig.useProxy !== false}
+                                  checked={!proxyStatusLoading && proxyStatus && !proxyStatus.webdav.enabled ? false : webdavConfig.useProxy !== false}
+                                  disabled={!proxyStatusLoading && proxyStatus ? !proxyStatus.webdav.enabled : false}
                                   onChange={(e) => setWebdavConfig(prev => ({ ...prev, useProxy: e.target.checked }))}
-                                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                                  className={`h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700 ${
+                                    !proxyStatusLoading && proxyStatus && !proxyStatus.webdav.enabled 
+                                      ? 'opacity-50 cursor-not-allowed' 
+                                      : ''
+                                  }`}
                                 />
-                                <label htmlFor="useProxy" className="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                <label htmlFor="useProxy" className={`ml-2 block text-sm font-medium text-gray-700 dark:text-gray-200 ${
+                                  !proxyStatusLoading && proxyStatus && !proxyStatus.webdav.enabled 
+                                    ? 'opacity-50' 
+                                    : ''
+                                }`}>
                                   使用服务器代理
                                 </label>
                               </div>
+                              
+                              {/* 代理状态指示器 */}
+                              <div className="mt-2">
+                                <ProxyStatusIndicator type="webdav" />
+                              </div>
+                              
                               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                 {webdavConfig.useProxy !== false 
                                   ? '✅ 通过服务器代理连接WebDAV，可解决CORS跨域问题（推荐）' 
                                   : '⚠️ 直连WebDAV服务器，性能更好但可能遇到CORS限制'}
                               </p>
+                              
+                              {/* 代理不可用警告 */}
+                              <ProxyWarning 
+                                type="webdav" 
+                                show={!proxyStatusLoading && proxyStatus !== null && !proxyStatus.webdav.enabled && webdavConfig.useProxy !== false}
+                                className="mt-2"
+                              />
                             </div>
 
                             {/* 测试连接和智能检测按钮 */}

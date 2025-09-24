@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ProxyConfigService } from '@/lib/proxy-config';
 
 export async function POST(request: NextRequest) {
+  // 检查WebDAV代理服务是否启用
+  if (!ProxyConfigService.isWebDAVProxyEnabled()) {
+    return NextResponse.json(
+      { 
+        error: 'WebDAV代理服务已禁用',
+        message: '管理员已禁用WebDAV代理服务，请使用直连模式或联系管理员启用代理服务',
+        code: 'PROXY_DISABLED'
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { method, url, headers, data, config } = body;

@@ -6,6 +6,7 @@
 import { WebDAVConfig } from './config';
 import { WebDAVClient } from './webdav';
 import { WebDAVProxyClient, WebDAVFile } from './webdav-proxy';
+import { ProxyStatusService } from './proxy-status';
 
 export class SmartWebDAVClient {
   private client: WebDAVClient | WebDAVProxyClient;
@@ -24,6 +25,28 @@ export class SmartWebDAVClient {
   }
 
   /**
+   * 异步初始化方法，检查代理服务状态
+   */
+  private async initializeClient(): Promise<void> {
+    // 如果配置要求使用代理，但代理服务不可用，则强制使用直连
+    if (this.config.useProxy !== false) {
+      try {
+        const isProxyAvailable = await ProxyStatusService.isWebDAVProxyAvailable();
+        if (!isProxyAvailable) {
+          console.warn('[WebDAV] 用户配置使用代理模式，但代理服务不可用，自动切换到直连模式');
+          this.client = new WebDAVClient(this.config);
+          // 更新内部配置状态
+          this.config = { ...this.config, useProxy: false };
+        }
+      } catch (error) {
+        console.warn('[WebDAV] 无法检查代理状态，切换到直连模式:', error);
+        this.client = new WebDAVClient(this.config);
+        this.config = { ...this.config, useProxy: false };
+      }
+    }
+  }
+
+  /**
    * 获取当前使用的连接方式
    */
   getConnectionType(): 'direct' | 'proxy' {
@@ -34,6 +57,7 @@ export class SmartWebDAVClient {
    * 上传文件到WebDAV服务器
    */
   async uploadFile(fileName: string, content: string): Promise<{ success: boolean; message: string }> {
+    await this.initializeClient();
     return await this.client.uploadFile(fileName, content);
   }
 
@@ -41,6 +65,7 @@ export class SmartWebDAVClient {
    * 从WebDAV服务器下载文件
    */
   async downloadFile(fileName: string): Promise<{ success: boolean; message: string; content?: string }> {
+    await this.initializeClient();
     return await this.client.downloadFile(fileName);
   }
 
@@ -48,6 +73,7 @@ export class SmartWebDAVClient {
    * 列出WebDAV服务器上的文件
    */
   async listFiles(): Promise<{ success: boolean; message: string; files?: WebDAVFile[] }> {
+    await this.initializeClient();
     return await this.client.listFiles();
   }
 
@@ -55,6 +81,7 @@ export class SmartWebDAVClient {
    * 删除文件
    */
   async deleteFile(fileName: string): Promise<{ success: boolean; message: string }> {
+    await this.initializeClient();
     return await this.client.deleteFile(fileName);
   }
 
@@ -62,6 +89,7 @@ export class SmartWebDAVClient {
    * 测试WebDAV连接
    */
   async testConnection(): Promise<{ success: boolean; message: string; details?: string; isWarning?: boolean }> {
+    await this.initializeClient();
     const result = await this.client.testConnection();
     
     // 为直连方式添加额外的说明信息

@@ -1,142 +1,138 @@
-import { NextResponse } from 'next/server';
-import axios, { AxiosError } from 'axios';
+import { NextRequest, NextResponse } from 'next/server';
+import { ProxyConfigService } from '@/lib/proxy-config';
 
-// 定义错误响应的接口
-interface ErrorResponse {
-  error?: string | { message?: string };
-  message?: string;
-  [key: string]: unknown;
-}
-
-export async function POST(request: Request) {
+/**
+ * API测试端点
+ * 用于测试LLM API连接
+ */
+export async function POST(request: NextRequest) {
   try {
-    // 获取请求参数
-    const { apiKey, apiBaseUrl, model, useProxy } = await request.json();
+    const body = await request.json();
+    const { apiKey, apiBaseUrl, model, useProxy } = body;
 
-    // 验证参数
-    if (!apiKey) {
-      return NextResponse.json({ success: false, message: 'API密钥不能为空' }, { status: 400 });
-    }
-    if (!apiBaseUrl) {
-      return NextResponse.json({ success: false, message: 'API基础URL不能为空' }, { status: 400 });
-    }
-    if (!model) {
-      return NextResponse.json({ success: false, message: '模型名称不能为空' }, { status: 400 });
+    // 验证必要参数
+    if (!apiKey || !apiBaseUrl || !model) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: '缺少必要的API参数' 
+        },
+        { status: 400 }
+      );
     }
 
-    const testMessages = [
-      {
-        role: 'user',
-        content: 'hi'
+    // 如果使用代理模式，检查代理服务是否启用
+    if (useProxy && !ProxyConfigService.isLLMProxyEnabled()) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'LLM代理服务已禁用，请使用直连模式或联系管理员启用代理服务'
+        },
+        { status: 403 }
+      );
+    }
+
+    // 构建测试请求
+    const testMessage = {
+      role: 'user',
+      content: 'Hello, this is a connection test.'
+    };
+
+    let response;
+    
+    if (useProxy) {
+      // 使用代理模式测试
+      let baseUrl;
+      if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
+      } else if (process.env.NODE_ENV === 'development') {
+        baseUrl = 'http://localhost:3000';
+      } else {
+        // 生产环境下的回退方案
+        const host = request.headers.get('host');
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
+        baseUrl = `${protocol}://${host}`;
       }
-    ];
-
-    // 根据用户配置选择直连或代理模式
-    if (useProxy === true) {
-      console.log('[API Test] 使用服务器代理模式测试');
-      // 使用内部代理API - 构建完整URL
-      const baseUrl = process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
       
-      await axios.post(`${baseUrl}/api/llm-proxy`, {
-        apiKey,
-        apiBaseUrl,
-        model,
-        messages: testMessages,
-        temperature: 0.7
-      }, {
+      response = await fetch(`${baseUrl}/api/llm-proxy`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
-      });
-      
-      // 如果请求成功，返回成功信息
-      return NextResponse.json({ 
-        success: true, 
-        message: 'API连接测试成功（服务器代理模式）' 
+        },
+        body: JSON.stringify({
+          apiKey,
+          apiBaseUrl,
+          model,
+          messages: [testMessage],
+          max_tokens: 10,
+          temperature: 0.1
+        })
       });
     } else {
-      console.log('[API Test] 使用直连模式测试');
-      // 直接调用LLM API
+      // 直连模式测试
       const apiUrl = `${apiBaseUrl}/chat/completions`;
-      await axios.post(apiUrl, {
-        model: model,
-        messages: testMessages,
-        temperature: 0.7
-      }, {
+      response = await fetch(apiUrl, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          model,
+          messages: [testMessage],
+          max_tokens: 10,
+          temperature: 0.1
+        })
       });
+    }
 
-      // 如果请求成功，返回成功信息
-      return NextResponse.json({ 
-        success: true, 
-        message: 'API连接测试成功（直连模式）' 
-      });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        { 
+          success: false,
+          message: `API测试失败: ${response.status} ${response.statusText}`,
+          details: errorData.error || errorData.message || '未知错误'
+        },
+        { status: response.status }
+      );
     }
-  } catch (error) {
-    // 将错误转换为AxiosError类型
-    const axiosError = error as AxiosError<ErrorResponse>;
-    console.error('[API] 测试连接失败:', axiosError);
+
+    const responseData = await response.json();
     
-    // 获取详细的错误信息
-    let errorMessage = '连接测试失败';
-    let errorDetails = '未知错误';
-    
-    // 处理不同类型的错误
-    if (axiosError.response) {
-      // 服务器返回了错误状态码
-      const status = axiosError.response.status;
-      errorMessage = `API返回错误状态码: ${status}`;
-      
-      // 尝试获取API返回的详细错误信息
-      if (axiosError.response.data) {
-        if (typeof axiosError.response.data === 'string') {
-          errorDetails = axiosError.response.data;
-        } else if (typeof axiosError.response.data === 'object') {
-          // 处理常见的API错误格式
-          if (axiosError.response.data.error) {
-            if (typeof axiosError.response.data.error === 'string') {
-              errorDetails = axiosError.response.data.error;
-            } else if (axiosError.response.data.error.message) {
-              errorDetails = axiosError.response.data.error.message;
-            }
-          } else if (axiosError.response.data.message) {
-            errorDetails = axiosError.response.data.message;
-          } else {
-            errorDetails = JSON.stringify(axiosError.response.data);
-          }
-        }
+    return NextResponse.json({
+      success: true,
+      message: `API连接测试成功（${useProxy ? '代理' : '直连'}模式）`,
+      details: `模型: ${model}, 响应正常`,
+      response: {
+        model: responseData.model || model,
+        usage: responseData.usage,
+        choices: responseData.choices?.length || 0
       }
-    } else if (axiosError.request) {
-      // 请求已发送但没有收到响应
-      errorMessage = '无法连接到API服务器';
-      errorDetails = '请检查API基础URL是否正确，以及网络连接是否正常';
-    } else {
-      // 设置请求时发生错误
-      errorMessage = '请求设置错误';
-      errorDetails = axiosError.message || '未知错误';
-    }
+    });
+
+  } catch (error) {
+    console.error('API测试失败:', error);
     
-    // 返回详细的错误信息
     return NextResponse.json(
       { 
-        success: false, 
-        message: errorMessage,
-        error: axiosError.message,
-        details: errorDetails
+        success: false,
+        message: 'API测试失败',
+        details: error instanceof Error ? error.message : '未知错误'
       },
       { status: 500 }
     );
   }
 }
 
-export async function GET() {
-  return NextResponse.json(
-    { error: 'Method not allowed' },
-    { status: 405 }
-  );
+// 支持OPTIONS请求（CORS预检）
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }

@@ -3,6 +3,7 @@ import { UserPreference, PaperAnalysis } from '@/lib/ai';
 import axios from 'axios';
 import redis from '@/lib/redis';
 import { ArxivPaper } from '@/lib/arxiv';
+import { ProxyConfigService } from '@/lib/proxy-config';
 
 const CACHE_EXPIRY = 7 * 24 * 60 * 60; // 7天过期（秒）
 
@@ -115,6 +116,11 @@ export async function POST(request: Request) {
 
     // 根据用户配置选择直连或代理模式
     if (preference.apiConfig?.useProxy === true) {
+      // 检查LLM代理服务是否启用
+      if (!ProxyConfigService.isLLMProxyEnabled()) {
+        throw new Error('LLM代理服务已禁用，请使用直连模式或联系管理员启用代理服务');
+      }
+      
       console.log('[AI] 使用服务器代理模式');
       // 使用内部代理API - 构建完整URL
       const baseUrl = process.env.VERCEL_URL 
