@@ -9,7 +9,7 @@ import Settings from './components/Settings';
 import VersionInfo from './components/VersionInfo';
 import FavoritesPage from './components/FavoritesPage';
 import FavoritesStats from './components/FavoritesStats';
-import FavoritesGuide from './components/FavoritesGuide';
+
 
 const PAPERS_PER_PAGE = 10;
 
@@ -253,10 +253,9 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            {/* 版本信息和指南 - 桌面端显示 */}
+            {/* 版本信息 - 桌面端显示 */}
             <div className="hidden lg:flex items-center space-x-2">
               <VersionInfo />
-              <FavoritesGuide />
             </div>
             {/* 移动端快捷按钮 */}
             {preferences && (
