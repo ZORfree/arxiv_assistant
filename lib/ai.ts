@@ -1,6 +1,46 @@
 import { UserService } from "./user";
 import { ProxyStatusService } from "./proxy-status";
 
+// 兼容处理大模型返回的各种JSON格式
+function parseAIResponse(content: string): PaperAnalysis {
+  // 移除换行符和转义字符处理
+  content = content.replace(/[\n\n]+/g, '').replace(/\\/g, '\\\\');
+  
+  // 移除可能的<think>思考内容</think>
+  content = content.replace(/<think>.*?<\/think>/gi, '');
+  
+  // 兼容以"json"开头的情况（可能有多个空格）
+  // 匹配 "json" 或 "json " 或 "json  " 等情况
+  content = content.replace(/^json\s*/i, '');
+  
+  // 移除可能的markdown代码块标记
+  content = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  
+  // 清理前后空白字符
+  content = content.trim();
+  
+  // 尝试解析JSON
+  let parsedContent = JSON.parse(content);
+  
+  // 检查是否被包装在output字段中
+  if (parsedContent && typeof parsedContent === 'object' && parsedContent.output) {
+    // 如果output是字符串，尝试再次解析
+    if (typeof parsedContent.output === 'string') {
+      try {
+        parsedContent = JSON.parse(parsedContent.output);
+      } catch {
+        // 如果解析失败，直接使用output的值
+        parsedContent = parsedContent.output;
+      }
+    } else {
+      // 如果output已经是对象，直接使用
+      parsedContent = parsedContent.output;
+    }
+  }
+  
+  return parsedContent;
+}
+
 export interface UserPreference {
   profession: string;
   interests: string[];
@@ -172,7 +212,8 @@ export class AIService {
     }
 
     const responseData = await response.json();
-    const result = JSON.parse(responseData.choices[0].message.content.replace(/[\r\n]+/g, '').replace(/\\/g, '\\\\')) as PaperAnalysis;
+    
+    const result = parseAIResponse(responseData.choices[0].message.content) as PaperAnalysis;
     
     console.log(`[AI] 直连分析完成，相关度：${result.score}%`);
     
