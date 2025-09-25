@@ -42,14 +42,14 @@ export class ProxyConfigService {
       llm: {
         enabled: config.llmProxyEnabled,
         message: config.llmProxyEnabled 
-          ? '✅ LLM代理服务已启用' 
-          : '❌ LLM代理服务已禁用，请联系管理员启用'
+          ? 'LLM代理服务已启用' 
+          : 'LLM代理服务已禁用，请联系管理员启用'
       },
       webdav: {
         enabled: config.webdavProxyEnabled,
         message: config.webdavProxyEnabled 
-          ? '✅ WebDAV代理服务已启用' 
-          : '❌ WebDAV代理服务已禁用，请联系管理员启用'
+          ? 'WebDAV代理服务已启用' 
+          : 'WebDAV代理服务已禁用，请联系管理员启用'
       }
     };
   }
