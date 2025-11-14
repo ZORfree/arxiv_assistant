@@ -96,6 +96,7 @@ yarn start
    - 配置AI服务API信息
    - 设置研究领域和兴趣方向
    - 可自定义并发请求数量，优化分析速度
+   - ArXiv代理URL设置为https://api.zorfree.qzz.io/或同类型服务([参考](https://github.com/ymyuuu/Cloudflare-Workers-Proxy))
 
 2. **WebDAV同步设置**（可选）
    - 在设置中配置WebDAV服务器信息
@@ -169,5 +170,5 @@ yarn start
 
 ---
 
-**版本**: v1.2.0  
+**版本**: v1.2.1  
 **技术支持**: 如有问题请提交Issue

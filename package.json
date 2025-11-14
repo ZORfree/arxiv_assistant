@@ -1,6 +1,6 @@
 {
   "name": "arxiv-assistant",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "AI-powered ArXiv paper discovery tool that helps researchers find relevant papers based on their preferences",
   "author": "ZORfree <https://github.com/ZORfree>",
   "license": "MIT",

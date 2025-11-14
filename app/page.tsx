@@ -25,6 +25,7 @@ export default function Home() {
   const [analyzedCount, setAnalyzedCount] = useState(0);
   const [totalAnalysisCount, setTotalAnalysisCount] = useState(0);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [arxivError, setArxivError] = useState<{ type: 'cors' | 'other'; message: string } | null>(null);
 
   useEffect(() => {
     const savedPreferences = localStorage.getItem('user_preferences');
@@ -159,6 +160,7 @@ export default function Home() {
     }
 
     setLoading(true);
+    setArxivError(null); // 清除之前的错误
     try {
       const fetchedPapers = await ArxivAPI.searchPapers(searchParams);
       setAllPapers(fetchedPapers);
@@ -171,7 +173,28 @@ export default function Home() {
       await analyzePapers(firstPagePapers, preferences);
     } catch (error) {
       console.error('Error fetching papers:', error);
-      alert('获取论文失败，请稍后重试');
+
+      // 检测是否是CORS错误
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isCorsError = errorMessage.includes('CORS') ||
+                          errorMessage.includes('Network') ||
+                          errorMessage.includes('Failed to fetch') ||
+                          (error && typeof error === 'object' && 'name' in error && error.name === 'TypeError');
+
+      // 检查是否已设置代理URL
+      const hasProxyUrl = preferences?.arxivProxyUrl && preferences.arxivProxyUrl.trim().length > 0;
+
+      if (isCorsError && !hasProxyUrl) {
+        setArxivError({
+          type: 'cors',
+          message: '由于浏览器CORS安全策略限制，无法直接访问ArXiv API'
+        });
+      } else {
+        setArxivError({
+          type: 'other',
+          message: errorMessage || '获取论文失败，请稍后重试'
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -375,8 +398,91 @@ export default function Home() {
                 showRelevantOnly={showRelevantOnly}
                 onShowRelevantOnlyChange={setShowRelevantOnly}
                 totalPapers={allPapers.length}
+                preferences={preferences}
               />
-              
+
+              {/* ArXiv错误提示 */}
+              {arxivError && (
+                <div className={`rounded-lg p-4 shadow-sm border ${
+                  arxivError.type === 'cors'
+                    ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                    : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                }`}>
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <svg
+                        className={`h-5 w-5 ${
+                          arxivError.type === 'cors'
+                            ? 'text-yellow-400'
+                            : 'text-red-400'
+                        }`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <h3 className={`text-sm font-medium ${
+                        arxivError.type === 'cors'
+                          ? 'text-yellow-800 dark:text-yellow-200'
+                          : 'text-red-800 dark:text-red-200'
+                      }`}>
+                        {arxivError.type === 'cors' ? '无法访问ArXiv API' : '搜索失败'}
+                      </h3>
+                      <div className={`mt-2 text-sm ${
+                        arxivError.type === 'cors'
+                          ? 'text-yellow-700 dark:text-yellow-300'
+                          : 'text-red-700 dark:text-red-300'
+                      }`}>
+                        <p>{arxivError.message}</p>
+                        {arxivError.type === 'cors' && (
+                          <div className="mt-3">
+                            <p className="font-medium mb-2">解决方案：</p>
+                            <ul className="list-disc list-inside space-y-1 ml-2">
+                              <li>在设置中配置ArXiv代理URL以解决跨域问题</li>
+                              <li>代理URL可以设置为https://api.zorfree.qzz.io/或自建</li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-4">
+                        <div className="flex space-x-3">
+                          {arxivError.type === 'cors' && (
+                            <button
+                              type="button"
+                              onClick={() => setShowPreferences(true)}
+                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 dark:bg-yellow-800 dark:text-yellow-100 dark:hover:bg-yellow-700 dark:focus:ring-offset-gray-900"
+                            >
+                              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              去设置代理URL
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setArxivError(null)}
+                            className={`inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                              arxivError.type === 'cors'
+                                ? 'border-yellow-300 text-yellow-700 bg-white hover:bg-yellow-50 focus:ring-yellow-500 dark:bg-gray-800 dark:text-yellow-200 dark:border-yellow-600 dark:hover:bg-gray-700 dark:focus:ring-offset-gray-900'
+                                : 'border-red-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500 dark:bg-gray-800 dark:text-red-200 dark:border-red-600 dark:hover:bg-gray-700 dark:focus:ring-offset-gray-900'
+                            }`}
+                          >
+                            关闭
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isAnalyzing && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="flex justify-between items-center mb-2">
