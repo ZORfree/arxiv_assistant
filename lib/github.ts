@@ -19,11 +19,19 @@ export interface VersionInfo {
 }
 
 export class GitHubAPI {
-  private static readonly REPO_API_URL = 'https://api.github.com/repos/ZORfree/arxiv_assistant/commits';
+  
+  private static readonly GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO || process.env.GITHUB_REPO || null;
+
+  private static resolveRepoApiUrl(): string {
+    if (!this.GITHUB_REPO) {
+      throw new Error('GITHUB_REPO environment variable is not set');
+    }
+    return `https://api.github.com/repos/${this.GITHUB_REPO}/commits`;
+  }
 
   static async getVersionInfo(): Promise<VersionInfo> {
     try {
-      const response = await axios.get(this.REPO_API_URL);
+      const response = await axios.get(this.resolveRepoApiUrl());
       const commits = response.data as GitHubCommit[];
       
       if (!commits || commits.length === 0) {
