@@ -30,7 +30,6 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
       maxConcurrentRequests: 3,
       useProxy: false // 默认不使用代理（直连）
     },
-    arxivProxyUrl: '' // 新增：ArXiv代理URL配置
   });
   
   // 添加表单验证状态
@@ -612,30 +611,6 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                     </Tab.Panel>
                     <Tab.Panel>
                       <div className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-lg shadow">
-                        {/* ArXiv代理URL配置 */}
-                        <div>
-                          <label htmlFor="arxivProxyUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                            ArXiv代理URL
-                          </label>
-                          <input
-                            type="text"
-                            id="arxivProxyUrl"
-                            value={preferences.arxivProxyUrl || ''}
-                            onChange={(e) => setPreferences(prev => ({
-                              ...prev,
-                              arxivProxyUrl: e.target.value
-                            }))}
-                            placeholder="例如：http://proxy.example.com/"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-                          />
-                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            可选项。如果ArXiv在您的地区访问不稳定，可以配置代理URL。留空则直接访问ArXiv官方API。
-                          </p>
-                        </div>
-
-                        {/* 分隔线 */}
-                        <div className="border-t border-gray-200 dark:border-gray-600"></div>
-
                         {/* WebDAV配置 */}
                         <div>
                           <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">WebDAV配置</h4>
@@ -1019,8 +994,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                         apiBaseUrl: '',
                                         model: '',
                                         maxConcurrentRequests: 3
-                                      },
-                                      arxivProxyUrl: ''
+                                      }
                                     };
                                     const defaultWebdavConfig: WebDAVConfig = {
                                       url: '',

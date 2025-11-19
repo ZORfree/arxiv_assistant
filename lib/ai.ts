@@ -52,7 +52,6 @@ export interface UserPreference {
     maxConcurrentRequests: number;
     useProxy?: boolean; // 新增：是否使用服务器代理，默认false（直连）
   };
-  arxivProxyUrl?: string; // 新增：ArXiv代理URL配置，可选
 }
 
 export interface PaperAnalysis {

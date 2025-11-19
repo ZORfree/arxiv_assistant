@@ -9,7 +9,6 @@ interface SearchFormProps {
   showRelevantOnly: boolean;
   onShowRelevantOnlyChange: (value: boolean) => void;
   totalPapers?: number;
-  preferences?: { arxivProxyUrl?: string }; // 新增：用于获取代理URL
 }
 
 const ARXIV_CATEGORIES = [
@@ -23,7 +22,7 @@ const ARXIV_CATEGORIES = [
   { value: 'eess.SP', label: '信号处理' }
 ];
 
-export default function SearchForm({ onSearch, loading, showRelevantOnly, onShowRelevantOnlyChange, totalPapers, preferences }: SearchFormProps) {
+export default function SearchForm({ onSearch, loading, showRelevantOnly, onShowRelevantOnlyChange, totalPapers }: SearchFormProps) {
   const [keyword, setKeyword] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
@@ -64,7 +63,6 @@ export default function SearchForm({ onSearch, loading, showRelevantOnly, onShow
       categories: selectedCategories,
       startDate,
       endDate,
-      proxyUrl: preferences?.arxivProxyUrl, // 新增：从用户偏好中获取代理URL
       showRelevantOnly
     };
     localStorage.setItem('last_search', JSON.stringify(searchParams));

@@ -181,8 +181,8 @@ export default function Home() {
                           errorMessage.includes('Failed to fetch') ||
                           (error && typeof error === 'object' && 'name' in error && error.name === 'TypeError');
 
-      // 检查是否已设置代理URL
-      const hasProxyUrl = preferences?.arxivProxyUrl && preferences.arxivProxyUrl.trim().length > 0;
+      // 检查环境变量中是否已设置代理URL
+      const hasProxyUrl = (process.env.NEXT_PUBLIC_ARXIV_PROXY_URL || '').trim().length > 0;
 
       if (isCorsError && !hasProxyUrl) {
         setArxivError({
@@ -398,7 +398,6 @@ export default function Home() {
                 showRelevantOnly={showRelevantOnly}
                 onShowRelevantOnlyChange={setShowRelevantOnly}
                 totalPapers={allPapers.length}
-                preferences={preferences}
               />
 
               {/* ArXiv错误提示 */}
@@ -444,27 +443,14 @@ export default function Home() {
                           <div className="mt-3">
                             <p className="font-medium mb-2">解决方案：</p>
                             <ul className="list-disc list-inside space-y-1 ml-2">
-                              <li>在设置中配置ArXiv代理URL以解决跨域问题</li>
-                              <li>代理URL可以设置为https://api.zorfree.qzz.io/或自建</li>
+                              <li>联系管理员配置ArXiv 代理 URL</li>
                             </ul>
                           </div>
                         )}
                       </div>
                       <div className="mt-4">
                         <div className="flex space-x-3">
-                          {arxivError.type === 'cors' && (
-                            <button
-                              type="button"
-                              onClick={() => setShowPreferences(true)}
-                              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 dark:bg-yellow-800 dark:text-yellow-100 dark:hover:bg-yellow-700 dark:focus:ring-offset-gray-900"
-                            >
-                              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              去设置代理URL
-                            </button>
-                          )}
+                          
                           <button
                             type="button"
                             onClick={() => setArxivError(null)}

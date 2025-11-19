@@ -85,8 +85,7 @@ export class ConfigService {
           model: '',
           maxConcurrentRequests: 3,
           useProxy: false // 默认不使用代理（直连）
-        },
-        arxivProxyUrl: ''
+        }
       };
     }
     
@@ -102,8 +101,7 @@ export class ConfigService {
           model: '',
           maxConcurrentRequests: 3,
           useProxy: false // 默认不使用代理（直连）
-        },
-        arxivProxyUrl: ''
+        }
       };
       
       // 确保useProxy字段存在，如果不存在则设为默认值false
@@ -124,8 +122,7 @@ export class ConfigService {
           model: '',
           maxConcurrentRequests: 3,
           useProxy: false // 默认不使用代理（直连）
-        },
-        arxivProxyUrl: ''
+        }
       };
     }
   }
