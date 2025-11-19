@@ -19,7 +19,7 @@ export interface VersionInfo {
 }
 
 export class GitHubAPI {
-  
+
   private static readonly GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO || process.env.GITHUB_REPO || null;
 
   private static resolveRepoApiUrl(): string {
@@ -33,14 +33,14 @@ export class GitHubAPI {
     try {
       const response = await axios.get(this.resolveRepoApiUrl());
       const commits = response.data as GitHubCommit[];
-      
+
       if (!commits || commits.length === 0) {
         return this.getDefaultVersionInfo();
       }
-      
+
       // 获取最新的提交日期
       const latestUpdate = commits[0].commit.author.date;
-      
+
       return {
         latestUpdate,
         commits: commits.slice(0, 10) // 只返回最近的10条提交记录

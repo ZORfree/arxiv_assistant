@@ -9,23 +9,23 @@ import { ProxyConfigService } from '@/lib/proxy-config';
 function parseAIResponse(content: string): PaperAnalysis {
   // 移除换行符和转义字符处理
   content = content.replace(/[\n\n]+/g, '').replace(/\\/g, '\\\\');
-  
+
   // 移除可能的<think>思考内容</think>
   content = content.replace(/<think>.*?<\/think>/gi, '');
-  
+
   // 兼容以"json"开头的情况（可能有多个空格）
   // 匹配 "json" 或 "json " 或 "json  " 等情况
   content = content.replace(/^json\s*/i, '');
-  
+
   // 移除可能的markdown代码块标记
   content = content.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-  
+
   // 清理前后空白字符
   content = content.trim();
-  
+
   // 尝试解析JSON
   let parsedContent = JSON.parse(content);
-  
+
   // 检查是否被包装在output字段中
   if (parsedContent && typeof parsedContent === 'object' && parsedContent.output) {
     // 如果output是字符串，尝试再次解析
@@ -41,11 +41,12 @@ function parseAIResponse(content: string): PaperAnalysis {
       parsedContent = parsedContent.output;
     }
   }
-  
+
   return parsedContent;
 }
 
-const CACHE_EXPIRY = 7 * 24 * 60 * 60; // 7天过期（秒）
+const CACHE_EXPIRY = Number(process.env.NEXT_PUBLIC_CACHE_EXPIRY) || Number(process.env.CACHE_EXPIRY) || 7 * 24 * 60 * 60;
+
 
 function getCacheKey(paperId: string, userId: string): string {
   return `paper_analysis_${userId}_${paperId}`;
@@ -70,13 +71,13 @@ export async function POST(request: Request) {
     const API_MODEL = preference.apiConfig?.model || null;
 
     if (!API_KEY) {
-      throw new Error('OpenAI API密钥未配置，请在Vercel项目设置中配置OPENAI_API_KEY');
+      throw new Error('OpenAI API密钥未配置');
     }
     if (!API_MODEL) {
-      throw new Error('OpenAI模型未配置，请在Vercel项目设置中配置OPENAI_MODEL');
+      throw new Error('OpenAI模型未配置');
     }
     if (!API_BASE_URL) {
-      throw new Error('OpenAI API基础URL未配置，请在Vercel项目设置中配置OPENAI_API_BASE_URL');
+      throw new Error('OpenAI API BASE URL未配置');
     }
     // console.log(`[AI] 获取到API密钥: ${API_KEY}; API_URL: ${API_BASE_URL}; API_MODEL: ${API_MODEL}`);
     // 从论文URL中提取论文ID（格式为：xxxx.xxxxx或xxxx.xxxxxvx）
@@ -88,35 +89,29 @@ export async function POST(request: Request) {
     // 尝试从缓存获取
     const cacheKey = getCacheKey(paper.id, userId);
     const cached = await redis.get<PaperAnalysis & { timestamp: number }>(cacheKey);
-    
+
     if (cached) {
-      // 检查缓存是否过期
-      if (Date.now() - cached.timestamp <= CACHE_EXPIRY * 1000) {
-        const { timestamp, ...analysis } = cached;
-        console.log(`[Cache] 使用缓存的分析结果：${paper.title}, 缓存时间：${new Date(timestamp).toISOString().replace('T', ' ').slice(0, 19)}`);
-        return NextResponse.json(analysis);
-      } else {
-        // 缓存过期，删除
-        await redis.del(cacheKey);
-      }
+      const { timestamp, ...analysis } = cached;
+      console.log(`[Cache] 使用缓存的分析结果：${paper.title}, 缓存时间：${new Date(timestamp).toISOString().replace('T', ' ').slice(0, 19)}`);
+      return NextResponse.json(analysis);
     }
     console.log(`[AI] [${new Date().toLocaleString()}] 开始分析论文：${paper.title}`);
     console.log(`[AI] 使用模型：${API_MODEL}`);
-    
-//     const prompt = `作为一个AI助手，请基于以下信息分析这篇论文是否与用户相关：
 
-// 用户信息：
-// - 职业：${preference.profession}
-// - 感兴趣的方向：${preference.interests.join(', ')}
-// - 不感兴趣的方向：${preference.nonInterests.join(', ')}
+    //     const prompt = `作为一个AI助手，请基于以下信息分析这篇论文是否与用户相关：
 
-// 论文信息：
-// - 标题：${paper.title}
-// - 摘要：${paper.summary}
-// - 分类：${paper.categories.join(', ')}
+    // 用户信息：
+    // - 职业：${preference.profession}
+    // - 感兴趣的方向：${preference.interests.join(', ')}
+    // - 不感兴趣的方向：${preference.nonInterests.join(', ')}
 
-// 请分析这篇论文是否与用户的研究方向和兴趣相关，并给出理由，以及完成对标题和摘要进行专业翻译为中文。请返回严格符合JSON格式的内容，不要包含多余的标记或解释，尤其要注意对所有的特殊字符进行转义，
-// 如：{"titleTrans":string (标题翻译内容),"summaryTrans":string (摘要翻译内容),"isRelevant":boolean (是否相关),"reason": string (原因说明,中文),"score": number (相关度评分，0-100)}`;
+    // 论文信息：
+    // - 标题：${paper.title}
+    // - 摘要：${paper.summary}
+    // - 分类：${paper.categories.join(', ')}
+
+    // 请分析这篇论文是否与用户的研究方向和兴趣相关，并给出理由，以及完成对标题和摘要进行专业翻译为中文。请返回严格符合JSON格式的内容，不要包含多余的标记或解释，尤其要注意对所有的特殊字符进行转义，
+    // 如：{"titleTrans":string (标题翻译内容),"summaryTrans":string (摘要翻译内容),"isRelevant":boolean (是否相关),"reason": string (原因说明,中文),"score": number (相关度评分，0-100)}`;
 
     const prompt = `{
       "task": "As an AI assistant, please analyze whether this paper is relevant to the user based on the following user_information and paper_information, provide the reasons and score(0-100), and complete a professional translation of the title and abstract into Chinese.",
@@ -141,7 +136,7 @@ export async function POST(request: Request) {
     }`;
 
     console.log('[AI] 正在调用OpenAI API...');
-    
+
     let response;
     const messages = [
       {
@@ -160,13 +155,13 @@ export async function POST(request: Request) {
       if (!ProxyConfigService.isLLMProxyEnabled()) {
         throw new Error('LLM代理服务已禁用，请使用直连模式或联系管理员启用代理服务');
       }
-      
+
       console.log('[AI] 使用服务器代理模式');
       // 使用内部代理API - 构建完整URL
-      const baseUrl = process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
         : (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
-      
+
       response = await axios.post(`${baseUrl}/api/llm-proxy`, {
         apiKey: API_KEY,
         apiBaseUrl: API_BASE_URL,
@@ -195,16 +190,24 @@ export async function POST(request: Request) {
     }
 
     // console.log(`[AI] 请求返回内容：${response.data.choices[0].message.content.replace(/[\r\n]+/g, '').replace(/\\/g, '\\\\')}`);
-    
+
     const result = parseAIResponse(response.data.choices[0].message.content) as PaperAnalysis;
     console.log(`[AI] 分析完成，相关度：${result.score}%`);
-    
+
     // 保存到缓存
-    await redis.set(cacheKey, {
-      ...result,
-      timestamp: Date.now()
-    }, { ex: CACHE_EXPIRY });
-    
+    if (CACHE_EXPIRY < 1) {
+      await redis.set(cacheKey, {
+        ...result,
+        timestamp: Date.now()
+      }, { ex: CACHE_EXPIRY });
+    } else {
+      await redis.set(cacheKey, {
+        ...result,
+        timestamp: Date.now()
+      });
+    }
+
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('[API] 论文分析失败:', error);

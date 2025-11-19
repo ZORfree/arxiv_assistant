@@ -66,7 +66,7 @@ export class ArxivAPI {
   static async searchPapers(params: ArxivSearchParams, start = 0, maxResults = this.MAX_RESULTS): Promise<ArxivPaper[]> {
     try {
       const { keyword, categories, startDate, endDate } = params;
-      
+
       // 构建查询条件
       const queryParts = [];
 
