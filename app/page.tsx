@@ -5,7 +5,7 @@ import { ArxivAPI, ArxivPaper, ArxivSearchParams } from '@/lib/arxiv';
 import { AIService, UserPreference } from '@/lib/ai';
 import SearchForm from './components/SearchForm';
 import PaperList from './components/PaperList';
-import Settings from './components/Settings';
+import SettingsPage from './components/SettingsPage';
 import VersionInfo from './components/VersionInfo';
 import FavoritesPage from './components/FavoritesPage';
 import FavoritesStats from './components/FavoritesStats';
@@ -257,6 +257,17 @@ export default function Home() {
     return <FavoritesPage onClose={() => setShowFavorites(false)} />;
   }
 
+  // 如果显示设置页面，直接返回设置页面组件
+  if (showPreferences) {
+    return (
+      <SettingsPage
+        onSave={handlePreferenceSave}
+        initialPreferences={preferences || undefined}
+        onClose={() => setShowPreferences(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* 头部标题区域 */}
@@ -317,14 +328,6 @@ export default function Home() {
 
       {/* 主内容区域 */}
       <div className="max-w-6xl mx-auto px-4 py-6">
-        {showPreferences && (
-          <Settings
-            onSave={handlePreferenceSave}
-            initialPreferences={preferences || undefined}
-            onClose={() => setShowPreferences(false)}
-          />
-        )}
-
         {preferences && (
           <div className="flex flex-col lg:flex-row gap-6">
             {/* 左侧边栏：快捷操作和收藏统计 */}

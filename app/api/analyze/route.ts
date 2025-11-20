@@ -62,10 +62,6 @@ export async function POST(request: Request) {
     };
     // 确保preference对象存在
     const preference = userpreference || {};
-    // 验证环境变量
-    // const API_KEY = process.env.OPENAI_API_KEY;
-    // const API_BASE_URL = process.env.OPENAI_API_BASE_URL;
-    // const API_MODEL = process.env.OPENAI_MODEL;
     const API_KEY = preference.apiConfig?.apiKey || null;
     const API_BASE_URL = preference.apiConfig?.apiBaseUrl || null;
     const API_MODEL = preference.apiConfig?.model || null;
@@ -79,13 +75,6 @@ export async function POST(request: Request) {
     if (!API_BASE_URL) {
       throw new Error('OpenAI API BASE URL未配置');
     }
-    // console.log(`[AI] 获取到API密钥: ${API_KEY}; API_URL: ${API_BASE_URL}; API_MODEL: ${API_MODEL}`);
-    // 从论文URL中提取论文ID（格式为：xxxx.xxxxx或xxxx.xxxxxvx）
-    console.log(`[TTTTTTTTTTTTT]获取到论文ID：${paper.id}`);
-    // const paperId = paper.link.match(/\d+\.\d+(?:v\d+)?/)?.[0];
-    // if (!paperId) {
-    //   throw new Error('无法从论文URL中提取论文ID');
-    // }
     // 尝试从缓存获取
     const cacheKey = getCacheKey(paper.id, userId);
     const cached = await redis.get<PaperAnalysis & { timestamp: number }>(cacheKey);
@@ -97,21 +86,6 @@ export async function POST(request: Request) {
     }
     console.log(`[AI] [${new Date().toLocaleString()}] 开始分析论文：${paper.title}`);
     console.log(`[AI] 使用模型：${API_MODEL}`);
-
-    //     const prompt = `作为一个AI助手，请基于以下信息分析这篇论文是否与用户相关：
-
-    // 用户信息：
-    // - 职业：${preference.profession}
-    // - 感兴趣的方向：${preference.interests.join(', ')}
-    // - 不感兴趣的方向：${preference.nonInterests.join(', ')}
-
-    // 论文信息：
-    // - 标题：${paper.title}
-    // - 摘要：${paper.summary}
-    // - 分类：${paper.categories.join(', ')}
-
-    // 请分析这篇论文是否与用户的研究方向和兴趣相关，并给出理由，以及完成对标题和摘要进行专业翻译为中文。请返回严格符合JSON格式的内容，不要包含多余的标记或解释，尤其要注意对所有的特殊字符进行转义，
-    // 如：{"titleTrans":string (标题翻译内容),"summaryTrans":string (摘要翻译内容),"isRelevant":boolean (是否相关),"reason": string (原因说明,中文),"score": number (相关度评分，0-100)}`;
 
     const prompt = `{
       "task": "As an AI assistant, please analyze whether this paper is relevant to the user based on the following user_information and paper_information, provide the reasons and score(0-100), and complete a professional translation of the title and abstract into Chinese.",
@@ -188,8 +162,6 @@ export async function POST(request: Request) {
         }
       });
     }
-
-    // console.log(`[AI] 请求返回内容：${response.data.choices[0].message.content.replace(/[\r\n]+/g, '').replace(/\\/g, '\\\\')}`);
 
     const result = parseAIResponse(response.data.choices[0].message.content) as PaperAnalysis;
     console.log(`[AI] 分析完成，相关度：${result.score}%`);
