@@ -622,11 +622,8 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
 
                             {/* 网络设置面板 */}
                             {selectedTab === 2 && (
-                            <div className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-lg shadow">
-                                <div>
+                                <div className="space-y-4">
                                     <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">WebDAV配置</h4>
-
-
 
                                     <div className="space-y-4">
                                         {/* WebDAV URL */}
@@ -851,14 +848,12 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                         </p>
                                     </div>
                                 </div>
-                            </div>
                         )}
 
                             {/* 数据管理面板 */}
                             {selectedTab === 3 && (
-                                <div className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-lg shadow">
-                                    <div>
-                                        <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">配置导入导出</h4>
+                                <div>
+                                    <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">配置导入导出</h4>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                                             导出您的所有配置数据（包括研究偏好、LLM设置、网络设置、收藏分类和收藏论文）到文件，或从备份文件恢复配置。
                                         </p>
@@ -1193,7 +1188,6 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                             )}
                                         </div>
                                     </div>
-                                </div>
                             )}
 
                             {/* 底部操作按钮（全局） */}

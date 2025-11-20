@@ -65,7 +65,7 @@ export default function PreferenceForm({ onSave, initialPreferences }: Preferenc
   };
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div className="space-y-6">
       <div>
         <label htmlFor="profession" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
           职业/研究领域
