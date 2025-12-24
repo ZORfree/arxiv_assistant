@@ -100,7 +100,7 @@ export class ArxivAPI {
       const query = queryParts.join(' AND ') || '*:*';
 
       // 从环境变量读取代理URL（客户端可见）
-      const envProxyUrl = (process.env.NEXT_PUBLIC_ARXIV_PROXY_URL || '').trim();
+      const envProxyUrl = (process.env.NEXT_PUBLIC_ARXIV_PROXY_URL || process.env.ARXIV_PROXY_URL || '').trim();
       const finalUrl = envProxyUrl ? `${envProxyUrl}${this.BASE_URL}` : this.BASE_URL;
 
       console.log(`[ArXiv] 开始获取论文，查询参数：${JSON.stringify({

@@ -182,7 +182,7 @@ export default function Home() {
                           (error && typeof error === 'object' && 'name' in error && error.name === 'TypeError');
 
       // 检查环境变量中是否已设置代理URL
-      const hasProxyUrl = (process.env.NEXT_PUBLIC_ARXIV_PROXY_URL || '').trim().length > 0;
+      const hasProxyUrl = (process.env.NEXT_PUBLIC_ARXIV_PROXY_URL || process.env.ARXIV_PROXY_URL || '').trim().length > 0;
 
       if (isCorsError && !hasProxyUrl) {
         setArxivError({
