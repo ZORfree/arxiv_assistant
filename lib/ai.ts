@@ -123,13 +123,13 @@ export class AIService {
           })
         });
 
+        const resultData = await response.json().catch(() => ({}));
+
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`Failed to analyze paper: ${response.status} ${response.statusText}. ${errorData.error || ''}`);
+          throw new Error(resultData.error || `HTTP ${response.status}: Failed to analyze paper`);
         }
 
-        const result = await response.json();
-        return result as PaperAnalysis;
+        return resultData as PaperAnalysis;
       } else {
         console.log('[AI] 使用直连模式');
         // 直连模式：前端直接调用LLM API
@@ -137,7 +137,7 @@ export class AIService {
       }
     } catch (error) {
       console.error('[AI] 论文分析失败:', error);
-      throw new Error('Failed to analyze paper with AI');
+      throw error; // 直接抛出原始错误信息
     }
   }
 
@@ -150,13 +150,6 @@ export class AIService {
     categories: string[];
   }, userpreference: UserPreference): Promise<PaperAnalysis> {
     const { apiKey, apiBaseUrl, model } = userpreference.apiConfig!;
-
-    // 检查缓存（暂时禁用）
-    // const cached = await this.getFromCache();
-    // if (cached) {
-    //   console.log(`[Cache] 使用缓存的分析结果：${paper.title}`);
-    //   return cached;
-    // }
 
     // 构建提示词
     const prompt = `{
@@ -205,19 +198,19 @@ export class AIService {
       })
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`LLM API调用失败: ${response.status} ${response.statusText}. ${JSON.stringify(errorData)}`);
-    }
+    const responseData = await response.json().catch(() => ({}));
 
-    const responseData = await response.json();
+    if (!response.ok) {
+      const apiError = responseData.error?.message || JSON.stringify(responseData);
+      if (response.status === 429) {
+        throw new Error('API 请求频率超限 (429)，请稍后再试或检查额度');
+      }
+      throw new Error(`LLM API 调用失败 (${response.status}): ${apiError}`);
+    }
     
     const result = parseAIResponse(responseData.choices[0].message.content) as PaperAnalysis;
     
     console.log(`[AI] 直连分析完成，相关度：${result.score}%`);
-    
-    // 保存到缓存（暂时禁用）
-    // await this.saveToCache();
     
     return result;
   }
@@ -250,13 +243,6 @@ export class AIService {
   }>, preference: UserPreference): Promise<PaperAnalysis[]> {
     const maxConcurrent = this.validateMaxConcurrent(preference);
     const results: PaperAnalysis[] = new Array(papers.length);
-    const failureResult: PaperAnalysis = {
-      isRelevant: false,
-      reason: '分析失败',
-      score: 0,
-      titleTrans: '',
-      summaryTrans: ''
-    };
   
     const queue = papers.map((paper, index) => ({ paper, index }));
     
@@ -267,8 +253,14 @@ export class AIService {
           .then(result => {
             results[index] = result;
           })
-          .catch(() => {
-            results[index] = failureResult;
+          .catch((error) => {
+            results[index] = {
+              isRelevant: false,
+              reason: error instanceof Error ? error.message : '分析失败',
+              score: 0,
+              titleTrans: '',
+              summaryTrans: ''
+            };
           })
       );
       

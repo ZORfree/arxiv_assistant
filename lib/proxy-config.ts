@@ -14,8 +14,8 @@ export class ProxyConfigService {
    */
   static getProxyConfig(): ProxyConfig {
     return {
-      llmProxyEnabled: process.env.ENABLE_LLM_PROXY === 'true',
-      webdavProxyEnabled: process.env.ENABLE_WEBDAV_PROXY === 'true'
+      llmProxyEnabled: ProxyConfigService.isLLMProxyEnabled(),
+      webdavProxyEnabled: ProxyConfigService.isLLMProxyEnabled()
     };
   }
 
@@ -23,14 +23,14 @@ export class ProxyConfigService {
    * 检查LLM代理是否启用
    */
   static isLLMProxyEnabled(): boolean {
-    return process.env.ENABLE_LLM_PROXY === 'true';
+    return (process.env.ENABLE_LLM_PROXY || process.env.NEXT_PUBLIC_ENABLE_LLM_PROXY) === 'true';
   }
 
   /**
    * 检查WebDAV代理是否启用
    */
   static isWebDAVProxyEnabled(): boolean {
-    return process.env.ENABLE_WEBDAV_PROXY === 'true';
+    return (process.env.ENABLE_WEBDAV_PROXY || process.env.NEXT_PUBLIC_ENABLE_WEBDAV_PROXY) === 'true';
   }
 
   /**

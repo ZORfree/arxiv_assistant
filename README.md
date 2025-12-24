@@ -56,8 +56,8 @@ ARXIV_API_DELAY=3000
 ARXIV_API_MAX_RESULTS=50
 
 # Redis 配置【可选，用于缓存】
-UPSTASH_REDIS_REST_URL=your_redis_url
-UPSTASH_REDIS_REST_TOKEN=your_redis_token
+# 支持标准 Redis 协议 (redis:// 或 rediss://)
+REDIS_URL=your_redis_url_or_upstash_resp_url
 
 # GitHub API 配置【可选，用于版本信息】
 GITHUB_TOKEN=your_github_token

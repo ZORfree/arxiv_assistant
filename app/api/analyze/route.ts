@@ -167,7 +167,7 @@ export async function POST(request: Request) {
     console.log(`[AI] 分析完成，相关度：${result.score}%`);
 
     // 保存到缓存
-    if (CACHE_EXPIRY < 1) {
+    if (CACHE_EXPIRY >= 1) {
       await redis.set(cacheKey, {
         ...result,
         timestamp: Date.now()
@@ -181,11 +181,33 @@ export async function POST(request: Request) {
 
 
     return NextResponse.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API] 论文分析失败:', error);
+    
+    // 提取更详细的错误信息
+    let errorMessage = 'Failed to analyze paper';
+    let statusCode = 500;
+
+    if (axios.isAxiosError(error)) {
+      statusCode = error.response?.status || 500;
+      const apiError = error.response?.data?.error;
+      
+      if (statusCode === 429) {
+        errorMessage = 'API 请求过于频繁 (429)，请稍后再试或检查额度';
+      } else if (statusCode === 401) {
+        errorMessage = 'API 密钥无效 (401)，请检查设置';
+      } else if (apiError?.message) {
+        errorMessage = `API 错误: ${apiError.message}`;
+      } else {
+        errorMessage = `LLM 服务返回错误: ${error.message}`;
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
     return NextResponse.json(
-      { error: 'Failed to analyze paper' },
-      { status: 500 }
+      { error: errorMessage },
+      { status: statusCode }
     );
   }
 }
