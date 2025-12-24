@@ -1,6 +1,7 @@
 /**
  * 前端代理状态管理
- * 用于检查和缓存代理服务状态
+ * 用于检查代理服务状态
+ * 移除了时间缓存，因为环境变量变更通常伴随重新部署
  */
 
 export interface ProxyStatus {
@@ -15,54 +16,50 @@ export interface ProxyStatus {
 }
 
 export class ProxyStatusService {
-  private static cache: ProxyStatus | null = null;
-  private static cacheTime: number = 0;
-  private static readonly CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+  private static ongoingRequest: Promise<ProxyStatus> | null = null;
 
   /**
    * 获取代理服务状态
+   * 移除 5 分钟时间缓存，每次调用都会实时向后端确认
+   * 使用 ongoingRequest 确保并发调用时只发起一个网络请求
    */
   static async getProxyStatus(): Promise<ProxyStatus> {
-    // 检查缓存
-    const now = Date.now();
-    if (this.cache && (now - this.cacheTime) < this.CACHE_DURATION) {
-      return this.cache;
+    // 如果当前已经有正在进行的请求，直接复用它，防止瞬间并发导致的重复请求
+    if (this.ongoingRequest) {
+      return this.ongoingRequest;
     }
 
-    try {
-      const response = await fetch('/api/proxy-status');
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        this.cache = result.data;
-        this.cacheTime = now;
-        return result.data;
-      } else {
-        throw new Error(result.error || '获取代理状态失败');
-      }
-    } catch (error) {
-      console.error('获取代理状态失败:', error);
-      // 返回默认状态（假设都禁用）
-      const defaultStatus: ProxyStatus = {
-        llm: {
-          enabled: false,
-          message: '无法获取LLM代理状态，请刷新页面重试'
-        },
-        webdav: {
-          enabled: false,
-          message: '无法获取WebDAV代理状态，请刷新页面重试'
+    // 发起新请求并记录 Promise
+    this.ongoingRequest = (async () => {
+      try {
+        const response = await fetch('/api/proxy-status');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          return result.data;
+        } else {
+          throw new Error(result.error || '获取代理状态失败');
         }
-      };
-      return defaultStatus;
-    }
-  }
+      } catch (error) {
+        console.error('[ProxyStatus] 获取失败:', error);
+        // 返回默认状态（全禁用）
+        return {
+          llm: {
+            enabled: false,
+            message: '无法获取代理状态，请检查网络'
+          },
+          webdav: {
+            enabled: false,
+            message: '无法获取代理状态，请检查网络'
+          }
+        };
+      } finally {
+        // 请求结束后必须清空，确保下一次调用能发起新的 fetch
+        this.ongoingRequest = null;
+      }
+    })();
 
-  /**
-   * 清除缓存
-   */
-  static clearCache(): void {
-    this.cache = null;
-    this.cacheTime = 0;
+    return this.ongoingRequest;
   }
 
   /**

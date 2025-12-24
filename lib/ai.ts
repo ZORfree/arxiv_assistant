@@ -90,25 +90,10 @@ export class AIService {
         throw new Error('API configuration not found in user preferences');
       }
 
-      // 检查代理服务状态，决定使用代理还是直连模式
+      // 根据用户偏好直接决定模式，不再进行前端预检
       const shouldUseProxy = userpreference.apiConfig.useProxy === true;
-      let actualUseProxy = shouldUseProxy;
       
       if (shouldUseProxy) {
-        // 如果用户配置要使用代理，检查代理服务是否可用
-        try {
-          const isProxyAvailable = await ProxyStatusService.isLLMProxyAvailable();
-          if (!isProxyAvailable) {
-            console.warn('[AI] 用户配置使用代理模式，但代理服务不可用，自动切换到直连模式');
-            actualUseProxy = false;
-          }
-        } catch (error) {
-          console.warn('[AI] 无法检查代理状态，切换到直连模式:', error);
-          actualUseProxy = false;
-        }
-      }
-      
-      if (actualUseProxy) {
         console.log('[AI] 使用服务器代理模式');
         // 代理模式：通过服务器API
         const response = await fetch('/api/analyze', {
@@ -126,6 +111,7 @@ export class AIService {
         const resultData = await response.json().catch(() => ({}));
 
         if (!response.ok) {
+          // 如果后端返回了错误信息（如“代理已禁用”），直接抛给UI显示
           throw new Error(resultData.error || `HTTP ${response.status}: Failed to analyze paper`);
         }
 
@@ -137,7 +123,7 @@ export class AIService {
       }
     } catch (error) {
       console.error('[AI] 论文分析失败:', error);
-      throw error; // 直接抛出原始错误信息
+      throw error;
     }
   }
 
@@ -201,6 +187,11 @@ export class AIService {
     const responseData = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      console.error('[AI] 直连 API 调用失败:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: responseData
+      });
       const apiError = responseData.error?.message || JSON.stringify(responseData);
       if (response.status === 429) {
         throw new Error('API 请求频率超限 (429)，请稍后再试或检查额度');
@@ -208,11 +199,18 @@ export class AIService {
       throw new Error(`LLM API 调用失败 (${response.status}): ${apiError}`);
     }
     
-    const result = parseAIResponse(responseData.choices[0].message.content) as PaperAnalysis;
-    
-    console.log(`[AI] 直连分析完成，相关度：${result.score}%`);
-    
-    return result;
+    const aiContent = responseData.choices[0].message.content;
+    console.log(`[AI] 直连收到响应内容 (长度: ${aiContent.length})`);
+
+    try {
+      const result = parseAIResponse(aiContent) as PaperAnalysis;
+      console.log(`[AI] 直连分析完成，相关度：${result.score}%`);
+      return result;
+    } catch (parseError) {
+      console.error('[AI] 直连解析响应内容失败!');
+      console.error('[AI] 原始响应内容:', aiContent);
+      throw new Error(`AI 响应格式解析失败: ${parseError instanceof Error ? parseError.message : '未知原因'}`);
+    }
   }
 
   // 缓存辅助方法（简化版，实际项目中可能需要更复杂的实现）

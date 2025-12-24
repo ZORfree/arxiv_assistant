@@ -163,8 +163,22 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = parseAIResponse(response.data.choices[0].message.content) as PaperAnalysis;
-    console.log(`[AI] 分析完成，相关度：${result.score}%`);
+    const aiContent = response.data.choices[0].message.content;
+    console.log(`[AI] 收到响应内容 (长度: ${aiContent.length})`);
+    
+    let result: PaperAnalysis;
+    try {
+      result = parseAIResponse(aiContent) as PaperAnalysis;
+    } catch (parseError) {
+      console.error('[AI] 解析响应内容失败!');
+      console.error('[AI] 失败的原始内容内容如下:');
+      console.error('-----------------------------------');
+      console.error(aiContent);
+      console.error('-----------------------------------');
+      throw new Error(`AI 响应格式解析失败: ${parseError instanceof Error ? parseError.message : '未知原因'}`);
+    }
+
+    console.log(`[AI] 分析完成，评分：${result.score}%`);
 
     // 保存到缓存
     if (CACHE_EXPIRY >= 1) {
@@ -182,9 +196,19 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error: unknown) {
-    console.error('[API] 论文分析失败:', error);
+    // 详细记录错误堆栈或请求详情
+    if (axios.isAxiosError(error)) {
+      console.error('[API] LLM 外部调用失败:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url
+      });
+    } else {
+      console.error('[API] 内部流程错误:', error);
+    }
     
-    // 提取更详细的错误信息
+    // 提取更详细的错误信息供前端显示
     let errorMessage = 'Failed to analyze paper';
     let statusCode = 500;
 
