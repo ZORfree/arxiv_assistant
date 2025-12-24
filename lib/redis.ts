@@ -1,18 +1,37 @@
 import { Redis as IORedis } from 'ioredis';
 
-// 获取 Redis URL，支持多种可能的变量名
-const redisUrl = process.env.NEXT_PUBLIC_UPSTASH_REDIS_REST_URL || process.env.NEXT_PUBLIC_REDIS_URL || process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL;
+// 1. 静态读取环境变量（优化方案第 4 点）
+const REDIS_CONFIG = {
+  URL: process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_URL || '',
+};
 
 let ioRedis: IORedis | null = null;
 
-// 只有当配置了 URL 时才初始化 Redis 客户端
-if (redisUrl) {
-  if (redisUrl.startsWith('http')) {
+// 2. 服务器启动日志（脱敏处理）
+if (typeof window === 'undefined') {
+  console.log('=== [Server Startup] Redis Configuration ===');
+  if (REDIS_CONFIG.URL) {
+    // 脱敏打印：显示协议和主机，隐藏密码
+    try {
+      const url = new URL(REDIS_CONFIG.URL);
+      console.log(`- Connection: ${url.protocol}//${url.host}`);
+    } catch {
+      console.log(`- Connection: ${REDIS_CONFIG.URL.substring(0, 15)}...`);
+    }
+  } else {
+    console.log('- Connection: None (Caching Disabled)');
+  }
+  console.log('===========================================');
+}
+
+// 3. 只有当配置了 URL 时才初始化 Redis 客户端
+if (REDIS_CONFIG.URL) {
+  if (REDIS_CONFIG.URL.startsWith('http')) {
     console.warn('[Redis] Detected HTTP/HTTPS URL. ioredis requires a redis:// or rediss:// protocol. Caching will be disabled.');
     ioRedis = null;
   } else {
     try {
-      ioRedis = new IORedis(redisUrl, {
+      ioRedis = new IORedis(REDIS_CONFIG.URL, {
         maxRetriesPerRequest: 1, // 减少重试次数，快速失败
         connectTimeout: 2000,    // 连接超时 2s
         retryStrategy(times) {
@@ -23,10 +42,8 @@ if (redisUrl) {
       });
 
       ioRedis.on('error', (err) => {
-        // 静默处理连接错误，不打印堆栈
-        if (err.message.includes('ECONNREFUSED') || err.message.includes('ETIMEDOUT')) {
-          // 仅在初次连接失败时警告一次即可，避免日志污染
-        } else {
+        // 静默处理连接错误
+        if (!err.message.includes('ECONNREFUSED') && !err.message.includes('ETIMEDOUT')) {
           console.error('[Redis] Client Error:', err.message);
         }
       });
@@ -35,8 +52,6 @@ if (redisUrl) {
       ioRedis = null;
     }
   }
-} else {
-  console.log('[Redis] No REDIS_URL found. Caching will be disabled.');
 }
 
 /**
@@ -53,15 +68,12 @@ const redis = {
       );
       
       const redisPromise = ioRedis.get(key);
-      
       const data = await Promise.race([redisPromise, timeoutPromise]);
       
       if (!data) return null;
       try {
-        // 尝试解析为 JSON
         return JSON.parse(data) as T;
       } catch {
-        // 如果不是 JSON，直接返回原始数据
         return data as unknown as T;
       }
     } catch (error) {
@@ -74,8 +86,6 @@ const redis = {
     if (!ioRedis) return null;
     try {
       const val = typeof value === 'string' ? value : JSON.stringify(value);
-      
-      // 同样给 set 操作加超时，虽然它是异步的，但防止 await 卡住
       const timeoutPromise = new Promise<null>((resolve) => 
         setTimeout(() => resolve(null), 1000)
       );
@@ -94,7 +104,6 @@ const redis = {
     }
   },
 
-  // 如果后续需要其他方法，可以在此添加
   del: async (key: string) => {
     if (!ioRedis) return 0;
     try {

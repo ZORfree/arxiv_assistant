@@ -1,10 +1,29 @@
 import axios from 'axios';
-// 导入 xml2js 类型定义
-import { parseString } from 'xml2js';
+import { XMLParser } from 'fast-xml-parser';
 
-import { promisify } from 'util';
+// 1. 静态初始化配置（优化方案第 4 点）
+const ARXIV_CONFIG = {
+  BASE_URL: 'https://export.arxiv.org/api/query',
+  DELAY: Number(process.env.NEXT_PUBLIC_ARXIV_API_DELAY) || Number(process.env.ARXIV_API_DELAY) || 3000,
+  MAX_RESULTS: Number(process.env.NEXT_PUBLIC_ARXIV_API_MAX_RESULTS) || Number(process.env.ARXIV_API_MAX_RESULTS) || 100,
+  PROXY_URL: (process.env.NEXT_PUBLIC_ARXIV_PROXY_URL || process.env.ARXIV_PROXY_URL || '').trim()
+};
 
-const parseXMLString = promisify(parseString);
+// 2. 服务器启动日志（脱敏处理）
+if (typeof window === 'undefined') {
+  console.log('=== [Server Startup] ArXiv Configuration ===');
+  console.log(`- API Delay: ${ARXIV_CONFIG.DELAY}ms`);
+  console.log(`- Max Results: ${ARXIV_CONFIG.MAX_RESULTS}`);
+  console.log(`- Proxy URL: ${ARXIV_CONFIG.PROXY_URL ? (ARXIV_CONFIG.PROXY_URL.substring(0, 15) + '...') : 'None'}`);
+  console.log('============================================');
+}
+
+// 3. 高性能解析器实例（优化方案第 3 点）
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@_",
+  textNodeName: "#text",
+});
 
 export interface ArxivPaper {
   id: string;
@@ -24,93 +43,36 @@ export interface ArxivSearchParams {
   endDate?: string;
 }
 
-interface ArxivAuthor {
-  name: string[];
-}
-
-interface ArxivCategory {
-  $: {
-    term: string;
-  };
-}
-
-interface ArxivLink {
-  $: {
-    href: string;
-    type: string;
-  };
-}
-
-interface ArxivEntry {
-  id: string[];
-  title: string[];
-  summary: string[];
-  author: ArxivAuthor[];
-  category: ArxivCategory[];
-  published: string[];
-  updated: string[];
-  link: ArxivLink[];
-}
-
-interface ArxivResponse {
-  feed: {
-    entry?: ArxivEntry[];
-  };
-}
-
 export class ArxivAPI {
-  private static readonly BASE_URL = 'https://export.arxiv.org/api/query';
-  private static readonly DELAY = Number(process.env.NEXT_PUBLIC_ARXIV_API_DELAY) || Number(process.env.ARXIV_API_DELAY) || 3000;
-  private static readonly MAX_RESULTS = Number(process.env.NEXT_PUBLIC_ARXIV_API_MAX_RESULTS) || Number(process.env.ARXIV_API_MAX_RESULTS) || 100;
-
-  static async searchPapers(params: ArxivSearchParams, start = 0, maxResults = this.MAX_RESULTS): Promise<ArxivPaper[]> {
+  static async searchPapers(params: ArxivSearchParams, start = 0, maxResults = ARXIV_CONFIG.MAX_RESULTS): Promise<ArxivPaper[]> {
     try {
       const { keyword, categories, startDate, endDate } = params;
-
-      // 构建查询条件
       const queryParts = [];
 
-      // 关键词搜索
       if (keyword) {
-        //keyword进行空格分割
-        const keywords = keyword.split(' ');
-        //遍历keywords
-        keywords.forEach((k) => {
-          queryParts.push(`all:${k}`);
-        })
+        keyword.split(' ').forEach((k) => queryParts.push(`all:${k}`));
       }
 
-      // 分类查询
       if (categories && categories.length > 0) {
         const categoryQuery = categories.map(cat => `cat:${cat}`).join(' OR ');
         queryParts.push(`(${categoryQuery})`);
       }
 
-      // 日期范围查询
       if (startDate || endDate) {
-        const formatDate = (date: string | undefined) => {
-          if (!date) return '*';
-          return date.replace(/-/g, '') + '0000';
-        };
-        const dateQuery = `submittedDate:[${formatDate(startDate)} TO ${formatDate(endDate)}]`;
-        queryParts.push(dateQuery);
+        const formatDate = (date: string | undefined) => date ? date.replace(/-/g, '') + '0000' : '*';
+        queryParts.push(`submittedDate:[${formatDate(startDate)} TO ${formatDate(endDate)}]`);
       }
 
-      // 组合所有查询条件
       const query = queryParts.join(' AND ') || '*:*';
 
-      // 从环境变量读取代理URL（客户端可见）
-      const envProxyUrl = (process.env.NEXT_PUBLIC_ARXIV_PROXY_URL || process.env.ARXIV_PROXY_URL || '').trim();
-      const finalUrl = envProxyUrl ? `${envProxyUrl}${this.BASE_URL}` : this.BASE_URL;
+      // 健壮的 URL 拼接
+      let finalUrl = ARXIV_CONFIG.BASE_URL;
+      if (ARXIV_CONFIG.PROXY_URL) {
+        const normalizedProxy = ARXIV_CONFIG.PROXY_URL.endsWith('/') ? ARXIV_CONFIG.PROXY_URL : `${ARXIV_CONFIG.PROXY_URL}/`;
+        finalUrl = `${normalizedProxy}${ARXIV_CONFIG.BASE_URL}`;
+      }
 
-      console.log(`[ArXiv] 开始获取论文，查询参数：${JSON.stringify({
-        query,
-        start,
-        maxResults,
-        sortBy: 'submittedDate',//lastUpdatedDate
-        sortOrder: 'descending',
-        finalUrl
-      })}`);
+      console.log(`[ArXiv] Fetching from: ${finalUrl}`);
 
       const response = await axios.get(finalUrl, {
         params: {
@@ -119,40 +81,66 @@ export class ArxivAPI {
           max_results: maxResults,
           sortBy: 'lastUpdatedDate',
           sortOrder: 'descending',
-          timestamp: Date.now(), // 添加当前时间戳，避免缓存问题
+          timestamp: Date.now(),
         }
       });
 
-      console.log(`[ArXiv] API响应状态码：${response.status}`);
-      const result = await parseXMLString(response.data) as ArxivResponse;
-      const papers = this.parseArxivResponse(result);
-      console.log(`[ArXiv] 成功获取到 ${papers.length} 篇论文`);
-      return papers;
+      // 使用 fast-xml-parser 进行高性能解析
+      const jsonObj = parser.parse(response.data);
+      return this.parseArxivResponse(jsonObj);
     } catch (error) {
       console.error('Error fetching papers from ArXiv:', error);
       throw new Error('Failed to fetch papers from ArXiv');
     }
   }
 
-  private static parseArxivResponse(data: ArxivResponse): ArxivPaper[] {
-    if (!data.feed || !data.feed.entry) {
-      console.log('[ArXiv] 未找到任何论文数据');
+  private static parseArxivResponse(data: any): ArxivPaper[] {
+    const entries = data?.feed?.entry;
+    if (!entries) {
+      console.log('[ArXiv] No papers found');
       return [];
     }
 
-    return data.feed.entry.map((entry: ArxivEntry) => ({
-      id: entry.id[0].slice(21),
-      title: entry.title[0],
-      summary: entry.summary[0],
-      authors: entry.author.map((author: ArxivAuthor) => author.name[0]),
-      categories: entry.category.map((cat: ArxivCategory) => cat.$.term),
-      published: entry.published[0],
-      updated: entry.updated[0],
-      link: entry.link.find((link: ArxivLink) => link.$.type === 'text/html')?.$.href || entry.id[0].replace('abs', 'pdf')
-    }));
+    // fast-xml-parser 处理单条目和多条目的差异（将其统一为数组）
+    const entryList = Array.isArray(entries) ? entries : [entries];
+
+    return entryList.map((entry: any) => {
+      // 提取作者
+      let authors: string[] = [];
+      if (entry.author) {
+        const authorArr = Array.isArray(entry.author) ? entry.author : [entry.author];
+        authors = authorArr.map((a: any) => a.name);
+      }
+
+      // 提取分类
+      let categories: string[] = [];
+      if (entry.category) {
+        const catArr = Array.isArray(entry.category) ? entry.category : [entry.category];
+        categories = catArr.map((c: any) => c['@_term']);
+      }
+
+      // 提取链接
+      let link = '';
+      if (entry.link) {
+        const linkArr = Array.isArray(entry.link) ? entry.link : [entry.link];
+        const htmlLink = linkArr.find((l: any) => l['@_type'] === 'text/html');
+        link = htmlLink ? htmlLink['@_href'] : (entry.id || '').replace('abs', 'pdf');
+      }
+
+      return {
+        id: (entry.id || '').split('/abs/')[1] || entry.id,
+        title: (entry.title || '').replace(/\n/g, ' ').trim(),
+        summary: (entry.summary || '').replace(/\n/g, ' ').trim(),
+        authors,
+        categories,
+        published: entry.published,
+        updated: entry.updated,
+        link
+      };
+    });
   }
 
   static async delay(): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, this.DELAY));
+    return new Promise(resolve => setTimeout(resolve, ARXIV_CONFIG.DELAY));
   }
 }
