@@ -70,7 +70,7 @@ const redis = {
     }
   },
 
-  set: async (key: string, value: any, options?: { ex?: number }) => {
+  set: async (key: string, value: unknown, options?: { ex?: number }) => {
     if (!ioRedis) return null;
     try {
       const val = typeof value === 'string' ? value : JSON.stringify(value);

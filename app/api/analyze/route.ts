@@ -181,7 +181,7 @@ export async function POST(request: Request) {
 
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API] 论文分析失败:', error);
     
     // 提取更详细的错误信息

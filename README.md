@@ -60,7 +60,6 @@ ARXIV_API_MAX_RESULTS=50
 REDIS_URL=your_redis_url_or_upstash_resp_url
 
 # GitHub API 配置【可选，用于版本信息】
-GITHUB_TOKEN=your_github_token
 GITHUB_REPO=your_repo_name
 ```
 
