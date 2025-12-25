@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArxivAPI, ArxivPaper, ArxivSearchParams } from '@/lib/arxiv';
-import { AIService, UserPreference } from '@/lib/ai';
+import { AIService, UserPreference, PaperAnalysis } from '@/lib/ai';
 import SearchForm from './components/SearchForm';
 import PaperList from './components/PaperList';
 import SettingsPage from './components/SettingsPage';
@@ -93,14 +93,6 @@ export default function Home() {
           summaryTrans: string;
         }> = new Array(papers.length);
         
-        const failureResult = {
-          isRelevant: false,
-          reason: '分析失败',
-          score: 0,
-          titleTrans: '',
-          summaryTrans: ''
-        };
-        
         const queue = paperDataForAnalysis.map((paper, index) => ({ paper, index }));
         let completedCount = 0;
         
@@ -120,17 +112,27 @@ export default function Home() {
                   return newPapers;
                 });
               })
-              .catch(() => {
-                results[index] = failureResult;
+              .catch((error) => {
+                // 统一错误信息提取
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                const errorResult: PaperAnalysis = {
+                  isRelevant: false,
+                  reason: errorMessage,
+                  score: 0,
+                  titleTrans: '',
+                  summaryTrans: '',
+                  error: true
+                };
+                results[index] = errorResult;
                 completedCount++;
                 updateProgress(completedCount);
                 
-                // 更新失败状态
+                // 更新失败状态，显示具体错误原因
                 setPapers(currentPapers => {
                   const newPapers = [...currentPapers];
                   newPapers[index] = {
                     ...newPapers[index],
-                    analysis: failureResult
+                    analysis: errorResult
                   };
                   return newPapers;
                 });
@@ -229,6 +231,7 @@ export default function Home() {
       setAnalyzedCount(1);
     } catch (error) {
       console.error(`重新分析论文失败: ${paper.title}`, error);
+      const errorMessage = error instanceof Error ? error.message : '分析失败';
       setPapers(currentPapers => {
         return currentPapers.map(p => {
           if (p.id === paper.id) {
@@ -236,10 +239,11 @@ export default function Home() {
               ...p,
               analysis: {
                 isRelevant: false,
-                reason: '分析失败',
+                reason: errorMessage,
                 score: 0,
                 titleTrans: "",
-                summaryTrans: ""
+                summaryTrans: "",
+                error: true
               }
             };
           }

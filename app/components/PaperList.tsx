@@ -161,23 +161,25 @@ export default function PaperList({ papers, loading, currentPage, totalPapers, o
                       className={`text-sm font-medium px-3 py-1 rounded-full ${
                         paper.analysis.isRelevant
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                          : paper.analysis.score === 0 && (paper.analysis.reason.includes('失败') || paper.analysis.reason.includes('错误') || paper.analysis.reason.includes('限'))
+                          : paper.analysis.error
                             ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
                             : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                       }`}
                     >
-                      {paper.analysis.score === 0 && (paper.analysis.reason.includes('失败') || paper.analysis.reason.includes('错误') || paper.analysis.reason.includes('限')) 
+                      {paper.analysis.error 
                         ? '分析异常' 
                         : `相关度: ${paper.analysis.score}%`}
                     </div>
                     <p className={`text-sm flex-1 ${
-                      paper.analysis.score === 0 && (paper.analysis.reason.includes('失败') || paper.analysis.reason.includes('错误') || paper.analysis.reason.includes('限'))
+                      paper.analysis.error
                         ? 'text-red-600 dark:text-red-400'
                         : 'text-gray-600 dark:text-gray-300'
                     }`}>
-                      {paper.analysis.reason}
+                      {paper.analysis.error && paper.analysis.reason.length > 100
+                        ? `${paper.analysis.reason.substring(0, 100)}...`
+                        : paper.analysis.reason}
                     </p>
-                    {(paper.analysis.score === 0 && (paper.analysis.reason.includes('失败') || paper.analysis.reason.includes('错误') || paper.analysis.reason.includes('限'))) && onRetryAnalysis && (
+                    {paper.analysis.error && onRetryAnalysis && (
                       <button
                         onClick={() => onRetryAnalysis(paper)}
                         className="px-3 py-1 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800 dark:hover:bg-indigo-900/40"

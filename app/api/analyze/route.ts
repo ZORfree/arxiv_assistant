@@ -132,9 +132,17 @@ export async function POST(request: Request) {
 
       console.log('[AI] 使用服务器代理模式');
       // 使用内部代理API - 构建完整URL
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '');
+      let baseUrl;
+      if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
+      } else if (process.env.NODE_ENV === 'development') {
+        baseUrl = 'http://localhost:3000';
+      } else {
+        // 生产环境下的回退方案
+        const host = request.headers.get('host');
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
+        baseUrl = `${protocol}://${host}`;
+      }
 
       response = await axios.post(`${baseUrl}/api/llm-proxy`, {
         apiKey: API_KEY,
@@ -145,7 +153,8 @@ export async function POST(request: Request) {
       }, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 50000 // 增加 50s 超时设置
       });
     } else {
       console.log('[AI] 使用直连模式');
@@ -159,7 +168,8 @@ export async function POST(request: Request) {
         headers: {
           'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 50000 // 增加 50s 超时设置
       });
     }
 
@@ -175,7 +185,11 @@ export async function POST(request: Request) {
       console.error('-----------------------------------');
       console.error(aiContent);
       console.error('-----------------------------------');
-      throw new Error(`AI 响应格式解析失败: ${parseError instanceof Error ? parseError.message : '未知原因'}`);
+      // 返回具体的解析失败原因
+      return NextResponse.json(
+        { error: `AI 响应解析失败: ${parseError instanceof Error ? parseError.message : 'JSON 格式错误'}` },
+        { status: 422 }
+      );
     }
 
     console.log(`[AI] 分析完成，评分：${result.score}%`);
@@ -216,7 +230,10 @@ export async function POST(request: Request) {
       statusCode = error.response?.status || 500;
       const apiError = error.response?.data?.error;
       
-      if (statusCode === 429) {
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = 'AI 分析请求超时 (50s)，请检查大模型响应速度或稍后重试';
+        statusCode = 504;
+      } else if (statusCode === 429) {
         errorMessage = 'API 请求过于频繁 (429)，请稍后再试或检查额度';
       } else if (statusCode === 401) {
         errorMessage = 'API 密钥无效 (401)，请检查设置';

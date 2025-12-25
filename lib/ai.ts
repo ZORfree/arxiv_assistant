@@ -60,6 +60,7 @@ export interface PaperAnalysis {
   score: number;
   titleTrans: string;
   summaryTrans: string;
+  error?: boolean; // 新增：显式标记分析是否出错
 }
 
 export class AIService {
@@ -93,126 +94,171 @@ export class AIService {
       // 根据用户偏好直接决定模式，不再进行前端预检
       const shouldUseProxy = userpreference.apiConfig.useProxy === true;
       
-      if (shouldUseProxy) {
-        console.log('[AI] 使用服务器代理模式');
-        // 代理模式：通过服务器API
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            paper, 
-            userpreference, 
-            userId,
-          })
-        });
-
-        const resultData = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          // 如果后端返回了错误信息（如“代理已禁用”），直接抛给UI显示
-          throw new Error(resultData.error || `HTTP ${response.status}: Failed to analyze paper`);
-        }
-
-        return resultData as PaperAnalysis;
-      } else {
-        console.log('[AI] 使用直连模式');
-        // 直连模式：前端直接调用LLM API
-        return await this.analyzeDirectly(paper, userpreference);
-      }
-    } catch (error) {
-      console.error('[AI] 论文分析失败:', error);
-      throw error;
-    }
-  }
-
-  // 新增：直连模式的分析方法
-  private static async analyzeDirectly(paper: {
-    link: string;
-    id: string;
-    title: string;
-    summary: string;
-    categories: string[];
-  }, userpreference: UserPreference): Promise<PaperAnalysis> {
-    const { apiKey, apiBaseUrl, model } = userpreference.apiConfig!;
-
-    // 构建提示词
-    const prompt = `{
-      "task": "As an AI assistant, please analyze whether this paper is relevant to the user based on the following user_information and paper_information, provide the reasons and score(0-100), and complete a professional translation of the title and abstract into Chinese.",
-      "restriction": "Return the content strictly in JSON format, without any additional tags or explanations, do not to escaping any special characters,like the output given below",
-      "user_information": {
-          "profession": ${userpreference.profession},
-          "interest": ${userpreference.interests.join(', ')},
-          "disinterest": ${userpreference.nonInterests.join(', ')}
-      },
-      "paper_information": {
-          "title": ${paper.title.replace(/[\r\n]+/g, '')},
-          "abstract": ${paper.summary.replace(/[\r\n]+/g, '')},
-          "category": ${paper.categories.join(', ')}
-      },
-      "output": {
-          "titleTrans": "Chinese translation of title",
-          "summaryTrans": "Chinese translation of summary",
-          "isRelevant": "The correlation you give, needs to be the boolean type",
-          "reason": "Your provide reasons",
-          "score": "The score you give, needs to be the int type"
-      }
-    }`;
-
-    // 直接调用LLM API
-    const apiUrl = `${apiBaseUrl}/chat/completions`;
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional academic paper analysis assistant, adept at assessing the relevance of papers based on the user backgrounds'
-          },
-          {
-            role: 'user',
-            content: prompt
+            if (shouldUseProxy) {
+              console.log('[AI] 使用服务器代理模式');
+              
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s 超时
+      
+              try {
+                // 代理模式：通过服务器API
+                const response = await fetch('/api/analyze', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    paper,
+                    userpreference,
+                    userId,
+                  }),
+                  signal: controller.signal
+                });
+      
+                const resultData = await response.json().catch(() => ({}));
+                clearTimeout(timeoutId);
+      
+                if (!response.ok) {
+                  // 如果后端返回了错误信息
+                  throw new Error(resultData.error || `服务器响应异常 (HTTP ${response.status})`);
+                }
+      
+                return resultData as PaperAnalysis;
+              } catch (err: any) {
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') {
+                  throw new Error('AI 分析请求超时 (50s)，请稍后重试');
+                }
+                if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+                  throw new Error('无法连接到服务器 API，请检查您的网络连接');
+                }
+                throw err;
+              }
+            } else {
+              console.log('[AI] 使用直连模式');
+              // 直连模式：前端直接调用LLM API
+              return await this.analyzeDirectly(paper, userpreference);
+            }
+          } catch (error: any) {
+            console.error('[AI] 论文分析最终失败:', error);
+            // 确保抛出的是包含 message 的 Error 对象
+            if (error instanceof Error) throw error;
+            throw new Error(String(error));
           }
-        ],
-        temperature: 0.7
-      })
-    });
-
-    const responseData = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      console.error('[AI] 直连 API 调用失败:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: responseData
-      });
-      const apiError = responseData.error?.message || JSON.stringify(responseData);
-      if (response.status === 429) {
-        throw new Error('API 请求频率超限 (429)，请稍后再试或检查额度');
-      }
-      throw new Error(`LLM API 调用失败 (${response.status}): ${apiError}`);
-    }
-    
-    const aiContent = responseData.choices[0].message.content;
-    console.log(`[AI] 直连收到响应内容 (长度: ${aiContent.length})`);
-
-    try {
-      const result = parseAIResponse(aiContent) as PaperAnalysis;
-      console.log(`[AI] 直连分析完成，相关度：${result.score}%`);
-      return result;
-    } catch (parseError) {
-      console.error('[AI] 直连解析响应内容失败!');
-      console.error('[AI] 原始响应内容:', aiContent);
-      throw new Error(`AI 响应格式解析失败: ${parseError instanceof Error ? parseError.message : '未知原因'}`);
-    }
-  }
-
+        }
+      
+        // 新增：直连模式的分析方法
+        private static async analyzeDirectly(paper: {
+          link: string;
+          id: string;
+          title: string;
+          summary: string;
+          categories: string[];
+        }, userpreference: UserPreference): Promise<PaperAnalysis> {
+          const { apiKey, apiBaseUrl, model } = userpreference.apiConfig!;
+      
+          // 构建提示词
+          const prompt = `{
+            "task": "As an AI assistant, please analyze whether this paper is relevant to the user based on the following user_information and paper_information, provide the reasons and score(0-100), and complete a professional translation of the title and abstract into Chinese.",
+            "restriction": "Return the content strictly in JSON format, without any additional tags or explanations, do not to escaping any special characters,like the output given below",
+            "user_information": {
+                "profession": ${userpreference.profession},
+                "interest": ${userpreference.interests.join(', ')},
+                "disinterest": ${userpreference.nonInterests.join(', ')}
+            },
+            "paper_information": {
+                "title": ${paper.title.replace(/[\r\n]+/g, '')},
+                "abstract": ${paper.summary.replace(/[\r\n]+/g, '')},
+                "category": ${paper.categories.join(', ')}
+            },
+            "output": {
+                "titleTrans": "Chinese translation of title",
+                "summaryTrans": "Chinese translation of summary",
+                "isRelevant": "The correlation you give, needs to be the boolean type",
+                "reason": "Your provide reasons",
+                "score": "The score you give, needs to be the int type"
+            }
+          }`;
+      
+          // 直接调用LLM API
+          const apiUrl = `${apiBaseUrl}/chat/completions`;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s 超时
+      
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: model,
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'You are a professional academic paper analysis assistant, adept at assessing the relevance of papers based on the user backgrounds'
+                  },
+                  {
+                    role: 'user',
+                    content: prompt
+                  }
+                ],
+                temperature: 0.7
+              }),
+              signal: controller.signal
+            });
+      
+            const responseData = await response.json().catch(() => ({}));
+            clearTimeout(timeoutId);
+      
+            if (!response.ok) {
+              console.error('[AI] 直连 API 调用失败:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: responseData
+              });
+              
+              // 尝试提取最详细的错误信息
+              const apiError = responseData.error?.message || responseData.message || JSON.stringify(responseData);
+              
+              if (response.status === 429) {
+                throw new Error('API 请求频率超限 (429)，请稍后再试或检查额度');
+              }
+              if (response.status === 401) {
+                throw new Error('API 密钥无效或已过期 (401)，请检查个性化设置');
+              }
+              throw new Error(`LLM API 调用失败 (${response.status}): ${apiError}`);
+            }
+            
+            const aiContent = responseData.choices[0].message.content;
+            console.log(`[AI] 直连收到响应内容 (长度: ${aiContent.length})`);
+      
+            try {
+              const result = parseAIResponse(aiContent) as PaperAnalysis;
+              console.log(`[AI] 直连分析完成，相关度：${result.score}%`);
+              return result;
+            } catch (parseError) {
+              console.error('[AI] 直连解析响应内容失败!');
+              console.error('[AI] 原始响应内容:', aiContent);
+              throw new Error(`AI 响应格式解析失败: ${parseError instanceof Error ? parseError.message : 'JSON 格式错误'}`);
+            }
+          } catch (err: any) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+              throw new Error('AI 分析请求超时 (50s)，请检查 API Base URL 或稍后重试');
+            }
+            
+            // 识别 CORS 跨域错误或断网 (TypeError: Failed to fetch)
+            if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+              throw new Error('直连失败：可能是由于 CORS 跨域限制或网络不通。建议在设置中开启“使用服务器代理”模式。');
+            }
+            
+            // 确保抛出的是包含 message 的 Error 对象
+            if (err instanceof Error) throw err;
+            throw new Error(String(err));
+          }
+        }
   // 缓存辅助方法（简化版，实际项目中可能需要更复杂的实现）
   private static async getFromCache(): Promise<PaperAnalysis | null> {
     try {
