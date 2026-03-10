@@ -231,8 +231,13 @@ export class AIService {
               throw new Error(`LLM API 调用失败 (${response.status}): ${apiError}`);
             }
             
-            const aiContent = responseData.choices[0].message.content;
-            console.log(`[AI] 直连收到响应内容 (长度: ${aiContent.length})`);
+            const aiContent = responseData.choices?.[0]?.message?.content;
+            console.log(`[AI] 直连收到响应内容 (长度: ${aiContent?.length || 0})`);
+
+            if (!aiContent || typeof aiContent !== 'string' || !aiContent.trim()) {
+              console.error('[AI] 直连模式：大模型返回内容为空');
+              throw new Error('大模型未返回有效内容，可能是由于模型负载过高或响应被截断，请稍后重试');
+            }
       
             try {
               const result = parseAIResponse(aiContent) as PaperAnalysis;
@@ -241,7 +246,7 @@ export class AIService {
             } catch (parseError) {
               console.error('[AI] 直连解析响应内容失败!');
               console.error('[AI] 原始响应内容:', aiContent);
-              throw new Error(`AI 响应格式解析失败: ${parseError instanceof Error ? parseError.message : 'JSON 格式错误'}`);
+              throw new Error(`AI 响应格式异常，无法解析为 JSON。原始内容: ${aiContent.substring(0, 100)}...`);
             }
           } catch (err: any) {
             clearTimeout(timeoutId);

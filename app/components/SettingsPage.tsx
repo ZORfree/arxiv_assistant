@@ -209,18 +209,27 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
     }, []);
 
     const handleSave = () => {
-        // 验证API配置必填项
-        const newErrors = {
-            apiKey: !preferences.apiConfig?.apiKey,
-            apiBaseUrl: !preferences.apiConfig?.apiBaseUrl,
-            model: !preferences.apiConfig?.model
-        };
+        // 仅在LLM设置页强制校验API配置，避免阻塞其他设置保存
+        if (selectedTab === 1) {
+            const newErrors = {
+                apiKey: !preferences.apiConfig?.apiKey,
+                apiBaseUrl: !preferences.apiConfig?.apiBaseUrl,
+                model: !preferences.apiConfig?.model
+            };
 
-        setErrors(newErrors);
+            setErrors(newErrors);
 
-        // 如果有错误，不执行保存
-        if (newErrors.apiKey || newErrors.apiBaseUrl || newErrors.model) {
-            return;
+            // 如果有错误，不执行保存
+            if (newErrors.apiKey || newErrors.apiBaseUrl || newErrors.model) {
+                return;
+            }
+        } else {
+            // 非LLM设置页保存时清除LLM错误提示，避免误导
+            setErrors({
+                apiKey: false,
+                apiBaseUrl: false,
+                model: false
+            });
         }
 
         try {
@@ -1202,9 +1211,9 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                     </button>
                                     <button
                                         type="button"
-                                        className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 ${isApiConfigValid() ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600' : 'bg-indigo-400 dark:bg-indigo-400 cursor-not-allowed'}`}
+                                        className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 ${(selectedTab !== 1 || isApiConfigValid()) ? 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600' : 'bg-indigo-400 dark:bg-indigo-400 cursor-not-allowed'}`}
                                         onClick={handleSave}
-                                        disabled={!isApiConfigValid()}
+                                        disabled={selectedTab === 1 && !isApiConfigValid()}
                                     >
                                         保存设置
                                     </button>

@@ -173,8 +173,16 @@ export async function POST(request: Request) {
       });
     }
 
-    const aiContent = response.data.choices[0].message.content;
-    console.log(`[AI] 收到响应内容 (长度: ${aiContent.length})`);
+    const aiContent = response.data?.choices?.[0]?.message?.content;
+    console.log(`[AI] 收到响应内容 (长度: ${aiContent?.length || 0})`);
+
+    if (!aiContent || typeof aiContent !== 'string' || !aiContent.trim()) {
+      console.error('[AI] 大模型返回内容为空');
+      return NextResponse.json(
+        { error: 'LLM 空回复，请检查大模型接口' },
+        { status: 502 }
+      );
+    }
     
     let result: PaperAnalysis;
     try {
@@ -187,7 +195,7 @@ export async function POST(request: Request) {
       console.error('-----------------------------------');
       // 返回具体的解析失败原因
       return NextResponse.json(
-        { error: `AI 响应解析失败: ${parseError instanceof Error ? parseError.message : 'JSON 格式错误'}` },
+        { error: `AI 响应格式异常，无法解析为 JSON。原始内容: ${aiContent.substring(0, 100)}...` },
         { status: 422 }
       );
     }
