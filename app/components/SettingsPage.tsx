@@ -510,7 +510,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                     <div className="mt-6">
                                         <button
                                             type="button"
-                                            className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 {isApiConfigValid() ? 'bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600' : 'bg-green-400 dark:bg-green-400 cursor-not-allowed'}`}
+                                            className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 ${isApiConfigValid() ? 'bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600' : 'bg-green-400 dark:bg-green-400 cursor-not-allowed'}`}
                                             onClick={async () => {
                                                 if (!isApiConfigValid()) return;
 
