@@ -50,6 +50,7 @@ export interface UserPreference {
     apiBaseUrl: string;
     model: string;
     maxConcurrentRequests: number;
+    relevanceThreshold?: number;
     useProxy?: boolean; // 新增：是否使用服务器代理，默认false（直连）
   };
 }
@@ -61,6 +62,38 @@ export interface PaperAnalysis {
   titleTrans: string;
   summaryTrans: string;
   error?: boolean; // 新增：显式标记分析是否出错
+}
+
+export const DEFAULT_RELEVANCE_THRESHOLD = 60;
+
+export function normalizeRelevanceThreshold(value: number | undefined | null): number {
+  const parsedValue = Number(value);
+
+  if (!Number.isFinite(parsedValue)) {
+    return DEFAULT_RELEVANCE_THRESHOLD;
+  }
+
+  return Math.min(100, Math.max(0, Math.round(parsedValue)));
+}
+
+export function getRelevanceThreshold(preference?: UserPreference | null): number {
+  return normalizeRelevanceThreshold(preference?.apiConfig?.relevanceThreshold);
+}
+
+export function shouldDisplayPaperByRelevance(
+  analysis: Pick<PaperAnalysis, 'isRelevant' | 'score'> | undefined,
+  showRelevantOnly: boolean,
+  relevanceThreshold: number
+): boolean {
+  if (!showRelevantOnly) {
+    return true;
+  }
+
+  if (!analysis?.isRelevant) {
+    return false;
+  }
+
+  return analysis.score >= normalizeRelevanceThreshold(relevanceThreshold);
 }
 
 export class AIService {

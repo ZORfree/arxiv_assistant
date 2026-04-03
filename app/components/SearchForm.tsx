@@ -8,6 +8,7 @@ interface SearchFormProps {
   loading?: boolean;
   showRelevantOnly: boolean;
   onShowRelevantOnlyChange: (value: boolean) => void;
+  relevanceThreshold?: number;
   totalPapers?: number;
 }
 
@@ -22,7 +23,7 @@ const ARXIV_CATEGORIES = [
   { value: 'eess.SP', label: '信号处理' }
 ];
 
-export default function SearchForm({ onSearch, loading, showRelevantOnly, onShowRelevantOnlyChange, totalPapers }: SearchFormProps) {
+export default function SearchForm({ onSearch, loading, showRelevantOnly, onShowRelevantOnlyChange, relevanceThreshold, totalPapers }: SearchFormProps) {
   const [keyword, setKeyword] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
@@ -167,7 +168,8 @@ export default function SearchForm({ onSearch, loading, showRelevantOnly, onShow
 
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <label className="inline-flex items-center">
+            <div className="flex flex-col">
+              <label className="inline-flex items-center">
               <input
                 type="checkbox"
                 className="form-checkbox h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
@@ -178,7 +180,13 @@ export default function SearchForm({ onSearch, loading, showRelevantOnly, onShow
                 <span className="hidden sm:inline">仅显示相关论文</span>
                 <span className="sm:hidden">仅相关</span>
               </span>
-            </label>
+              </label>
+              {typeof relevanceThreshold === 'number' && (
+                <span className="ml-7 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  当前阈值 ≥ {relevanceThreshold}
+                </span>
+              )}
+            </div>
             {totalPapers !== undefined && (
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 <span className="hidden sm:inline">共找到 {totalPapers} 篇论文</span>

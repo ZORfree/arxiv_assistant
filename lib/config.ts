@@ -1,4 +1,4 @@
-import { UserPreference } from './ai';
+import { DEFAULT_RELEVANCE_THRESHOLD, UserPreference } from './ai';
 import { FavoriteCategory, FavoritePaper, FavoritesService } from './favorites';
 import { UserService } from './user';
 import { SmartWebDAVClient } from './webdav-smart';
@@ -84,6 +84,7 @@ export class ConfigService {
           apiBaseUrl: '',
           model: '',
           maxConcurrentRequests: 3,
+          relevanceThreshold: DEFAULT_RELEVANCE_THRESHOLD,
           useProxy: false // 默认不使用代理（直连）
         }
       };
@@ -100,6 +101,7 @@ export class ConfigService {
           apiBaseUrl: '',
           model: '',
           maxConcurrentRequests: 3,
+          relevanceThreshold: DEFAULT_RELEVANCE_THRESHOLD,
           useProxy: false // 默认不使用代理（直连）
         }
       };
@@ -107,6 +109,10 @@ export class ConfigService {
       // 确保useProxy字段存在，如果不存在则设为默认值false
       if (preferences.apiConfig && preferences.apiConfig.useProxy === undefined) {
         preferences.apiConfig.useProxy = false;
+      }
+
+      if (preferences.apiConfig && preferences.apiConfig.relevanceThreshold === undefined) {
+        preferences.apiConfig.relevanceThreshold = DEFAULT_RELEVANCE_THRESHOLD;
       }
       
       return preferences;
@@ -121,6 +127,7 @@ export class ConfigService {
           apiBaseUrl: '',
           model: '',
           maxConcurrentRequests: 3,
+          relevanceThreshold: DEFAULT_RELEVANCE_THRESHOLD,
           useProxy: false // 默认不使用代理（直连）
         }
       };

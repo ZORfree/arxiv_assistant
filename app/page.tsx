@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArxivAPI, ArxivPaper, ArxivSearchParams } from '@/lib/arxiv';
-import { AIService, UserPreference, PaperAnalysis } from '@/lib/ai';
+import { AIService, UserPreference, PaperAnalysis, getRelevanceThreshold, shouldDisplayPaperByRelevance } from '@/lib/ai';
 import SearchForm from './components/SearchForm';
 import PaperList from './components/PaperList';
 import SettingsPage from './components/SettingsPage';
@@ -272,6 +272,11 @@ export default function Home() {
     );
   }
 
+  const relevanceThreshold = getRelevanceThreshold(preferences);
+  const visiblePapers = papers.filter((paper) =>
+    shouldDisplayPaperByRelevance(paper.analysis, showRelevantOnly, relevanceThreshold)
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* 头部标题区域 */}
@@ -404,6 +409,7 @@ export default function Home() {
                 loading={loading}
                 showRelevantOnly={showRelevantOnly}
                 onShowRelevantOnlyChange={setShowRelevantOnly}
+                relevanceThreshold={relevanceThreshold}
                 totalPapers={allPapers.length}
               />
 
@@ -496,7 +502,7 @@ export default function Home() {
               )}
               
               <PaperList
-                papers={showRelevantOnly ? papers.filter(paper => paper.analysis?.isRelevant) : papers}
+                papers={visiblePapers}
                 loading={loading}
                 currentPage={currentPage}
                 totalPapers={allPapers.length}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { UserPreference } from '@/lib/ai';
+import { DEFAULT_RELEVANCE_THRESHOLD, UserPreference, normalizeRelevanceThreshold } from '@/lib/ai';
 import PreferenceForm from './PreferenceForm';
 import { ExclamationCircleIcon, CheckCircleIcon, XCircleIcon, ExclamationTriangleIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, TrashIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
@@ -25,6 +25,7 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
             apiBaseUrl: '',
             model: '',
             maxConcurrentRequests: 3,
+            relevanceThreshold: DEFAULT_RELEVANCE_THRESHOLD,
             useProxy: false // 默认不使用代理（直连）
         },
     });
@@ -460,6 +461,30 @@ export default function Settings({ onSave, initialPreferences, onClose }: Settin
                                     </div>
 
                                     {/* 使用服务器代理选项 */}
+                                    <div>
+                                        <label htmlFor="relevanceThreshold" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                            相关度阈值
+                                        </label>
+                                        <input
+                                            type="number"
+                                            id="relevanceThreshold"
+                                            value={preferences.apiConfig?.relevanceThreshold ?? DEFAULT_RELEVANCE_THRESHOLD}
+                                            onChange={(e) => setPreferences(prev => ({
+                                                ...prev,
+                                                apiConfig: {
+                                                    ...prev.apiConfig!,
+                                                    relevanceThreshold: normalizeRelevanceThreshold(parseInt(e.target.value, 10))
+                                                }
+                                            } as UserPreference))}
+                                            min="0"
+                                            max="100"
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                            勾选“仅显示相关论文”时，只有被判定为相关且相关度不低于该阈值的论文才会显示。
+                                        </p>
+                                    </div>
+
                                     <div>
                                         <div className="flex items-center">
                                             <input
